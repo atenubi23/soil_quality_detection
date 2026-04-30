@@ -18,11 +18,7 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _createDB,
-    );
+    return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -47,13 +43,14 @@ class DatabaseHelper {
     return await db.insert('soil_results', result.toMap());
   }
 
-  // ── GET ALL (newest first) ──
+  // ── GET ALL (Revised: Newest first by ID and Date) ──
   Future<List<SoilResult>> getAllResults() async {
     final db = await instance.database;
-    final maps = await db.query(
-      'soil_results',
-      orderBy: 'id DESC',
-    );
+
+    // In-update natin ang orderBy. 'id DESC' ay siguradong
+    // ang pinakahuling entry ang nasa itaas.
+    final maps = await db.query('soil_results', orderBy: 'id DESC');
+
     return maps.map((map) => SoilResult.fromMap(map)).toList();
   }
 
@@ -95,6 +92,7 @@ class SoilResult {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id, // Isinama ang ID para sa updates kung sakali
       'farm_name': farmName,
       'prediction': prediction,
       'confidence': confidence,
@@ -108,14 +106,14 @@ class SoilResult {
 
   factory SoilResult.fromMap(Map<String, dynamic> map) {
     return SoilResult(
-      id: map['id'],
-      farmName: map['farm_name'],
-      prediction: map['prediction'],
-      confidence: map['confidence'],
-      phLevel: map['ph_level'],
-      phStatus: map['ph_status'],
-      date: map['date'],
-      imagePath: map['image_path'],
+      id: map['id'] as int?,
+      farmName: map['farm_name'] as String,
+      prediction: map['prediction'] as String,
+      confidence: map['confidence'] as String,
+      phLevel: map['ph_level'] as String,
+      phStatus: map['ph_status'] as String,
+      date: map['date'] as String,
+      imagePath: map['image_path'] as String,
       isSuitable: map['is_suitable'] == 1,
     );
   }
