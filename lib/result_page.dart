@@ -13,6 +13,7 @@ class ResultPage extends StatefulWidget {
   final String phStatus;
   final String date;
   final String farmName;
+  final bool isReadOnly; // Ito ang flag natin
 
   const ResultPage({
     super.key,
@@ -22,6 +23,7 @@ class ResultPage extends StatefulWidget {
     required this.phLevel,
     required this.phStatus,
     required this.date,
+    this.isReadOnly = false, // Default ay false (para sa fresh scan)
     this.farmName = 'Amadeo Farm : Field North',
   });
 
@@ -121,7 +123,7 @@ class _ResultPageState extends State<ResultPage> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'The soil scan result has been saved to your field records. You can view it anytime in the List.',
+                'The soil scan result has been saved to your field records.',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 13,
@@ -304,8 +306,8 @@ class _ResultPageState extends State<ResultPage> {
                                   Container(
                                     width: 100,
                                     height: 100,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFD9D9D9),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFD9D9D9),
                                       shape: BoxShape.circle,
                                     ),
                                     clipBehavior: Clip.antiAlias,
@@ -465,61 +467,64 @@ class _ResultPageState extends State<ResultPage> {
                       ),
                     ),
 
-                    // ── NEW BUTTON SECTION ──
-                    Column(
-                      children: [
-                        const SizedBox(height: 24),
-                        // Save to Field Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _isSaving ? null : _saveToField,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF187B4D),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: _isSaving
-                                ? const CircularProgressIndicator(
-                                    color: Colors.white,
-                                  )
-                                : Text(
-                                    _isSaved
-                                        ? 'Saved to Records'
-                                        : 'Save to Field',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                    // ── CONDITIONAL BUTTON SECTION ──
+                    // Kung isReadOnly ay true, hindi ipapakita ang column na ito
+                    widget.isReadOnly
+                        ? const SizedBox.shrink()
+                        : Column(
+                            children: [
+                              const SizedBox(height: 24),
+                              // Save to Field Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: ElevatedButton(
+                                  onPressed: _isSaving ? null : _saveToField,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF187B4D),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
+                                    elevation: 0,
                                   ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // Back to Home Button
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const HomeScreenPage(),
+                                  child: _isSaving
+                                      ? const CircularProgressIndicator(
+                                          color: Colors.white,
+                                        )
+                                      : Text(
+                                          _isSaved
+                                              ? 'Saved to Records'
+                                              : 'Save to Field',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                ),
                               ),
-                              (route) => false,
-                            );
-                          },
-                          child: const Text(
-                            'Back to Home',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontFamily: 'Inter',
-                            ),
+                              const SizedBox(height: 12),
+                              // Back to Home Button
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const HomeScreenPage(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                },
+                                child: const Text(
+                                  'Back to Home',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 24),
                   ],
                 ),

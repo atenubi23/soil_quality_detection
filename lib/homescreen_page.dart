@@ -15,12 +15,17 @@ class HomeScreenPage extends StatefulWidget {
 
 class _HomeScreenPageState extends State<HomeScreenPage> {
   late int _selectedIndex;
+  // Gagamitin natin ito para tawagin ang refreshData sa HomeView
   final GlobalKey<_HomeViewState> _homeKey = GlobalKey<_HomeViewState>();
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    // Siguraduhin na mag-refresh sa unang load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _homeKey.currentState?.refreshData();
+    });
   }
 
   @override
@@ -36,7 +41,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
         height: screenHeight,
         child: Stack(
           children: [
-            // --- Top Section ---
+            // --- Top Branding Section ---
             Positioned(
               top: 0,
               left: 0,
@@ -137,7 +142,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
                       ),
                     ),
 
-                    // --- Bottom Navigation ---
+                    // --- Navigation Bar ---
                     Container(
                       width: screenWidth,
                       height: screenHeight * 0.105,
@@ -190,14 +195,17 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
     return GestureDetector(
       onTap: () async {
         if (index == 1) {
+          // Buksan ang Camera at hintayin ang pagbalik
           await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const CamOpen()),
           );
+          // Pagbalik, FORCE refresh ang Home
           setState(() => _selectedIndex = 0);
           _homeKey.currentState?.refreshData();
         } else {
           setState(() => _selectedIndex = index);
+          // Kung pinindot ang Home icon mismo, i-refresh din
           if (index == 0) {
             _homeKey.currentState?.refreshData();
           }
@@ -241,7 +249,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
 }
 
 // ─────────────────────────────────────────
-// HOME VIEW (RECENTS)
+// HOME VIEW
 // ─────────────────────────────────────────
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -260,9 +268,9 @@ class _HomeViewState extends State<HomeView> {
     refreshData();
   }
 
+  // Ginawang public ang method para matawag ng GlobalKey
   Future<void> refreshData() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+    // Kinukuha lahat tapos nire-reverse para makuha ang pinakabago
     final all = await DatabaseHelper.instance.getAllResults();
     if (mounted) {
       setState(() {
@@ -270,11 +278,6 @@ class _HomeViewState extends State<HomeView> {
         _isLoading = false;
       });
     }
-  }
-
-  String _getFormattedDate() {
-    final now = DateTime.now();
-    return "${now.year}-${now.month}-${now.day}";
   }
 
   Color _getPredictionColor(String prediction) {
@@ -300,16 +303,6 @@ class _HomeViewState extends State<HomeView> {
       );
     }
 
-    if (_recentResults.isEmpty) {
-      return const Center(
-        child: Text(
-          'No field records yet.\nScan a soil sample to start.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey),
-        ),
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -321,61 +314,66 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _recentResults.length,
-            itemBuilder: (context, index) {
-              final result = _recentResults[index];
-              final predColor = _getPredictionColor(result.prediction);
+          child: _recentResults.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No records found.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _recentResults.length,
+                  itemBuilder: (context, index) {
+                    final result = _recentResults[index];
+                    final predColor = _getPredictionColor(result.prediction);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(color: Color(0xFFE8E9E9)),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  tileColor: Colors.white,
-                  contentPadding: const EdgeInsets.all(16),
-                  onTap: () {
-                    // Ginagamit ang data mula sa 'result' object ng database
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ResultPage(
-                          imagePath: result.imagePath,
-                          prediction: result.prediction,
-                          confidence: result.confidence.toString(),
-                          phLevel: result.phLevel.toString(),
-                          phStatus: result.phStatus ?? "Unknown",
-                          date: result.date,
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        side: const BorderSide(color: Color(0xFFE8E9E9)),
+                      ),
+                      child: ListTile(
+                        onTap: () async {
+                          // Pagbalik galing result page, mag-refresh din dapat
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ResultPage(
+                                imagePath: result.imagePath,
+                                prediction: result.prediction,
+                                confidence: result.confidence.toString(),
+                                phLevel: result.phLevel.toString(),
+                                phStatus: result.phStatus ?? "Stable",
+                                date: result.date,
+                                isReadOnly: true,
+                              ),
+                            ),
+                          );
+                          refreshData();
+                        },
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: predColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.grass, color: predColor),
                         ),
+                        title: Text(
+                          result.farmName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'SOM: ${result.prediction}\npH: ${result.phLevel}\n${result.date}',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
                       ),
                     );
                   },
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: predColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Icons.grass, color: predColor),
-                  ),
-                  title: Text(
-                    result.farmName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    'SOM: ${result.prediction}\npH: ${result.phLevel}\n${result.date}',
-                    style: const TextStyle(height: 1.5),
-                  ),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
