@@ -56,11 +56,35 @@ class _ListViewWidgetState extends State<ListViewWidget> {
             TextButton(
               onPressed: () async {
                 if (result.id != null) {
+                  // 1. Itago muna ang record sa memory bago i-delete
+                  final deletedResult = result;
+                  final deletedIndex = _results.indexOf(result);
+
+                  // 2. I-delete sa Database
                   await DatabaseHelper.instance.deleteResult(result.id!);
+
+                  // 3. I-update ang UI
                   Navigator.pop(context);
                   _loadResults();
+
+                  // 4. Ipakita ang SnackBar na may Undo
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Record deleted")),
+                    SnackBar(
+                      content: Text("Nabura ang record ni ${result.farmName}"),
+                      action: SnackBarAction(
+                        label: "UNDO",
+                        onPressed: () async {
+                          // Ibalik ang record sa database
+                          await DatabaseHelper.instance.insertResult(
+                            deletedResult,
+                          );
+                          _loadResults(); // I-refresh ang listahan
+                        },
+                      ),
+                      duration: const Duration(
+                        seconds: 4,
+                      ), // May 4 seconds ang user para mag-undo
+                    ),
                   );
                 }
               },
