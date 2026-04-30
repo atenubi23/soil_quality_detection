@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'cam_open.dart';
 import 'list_view.dart';
 import 'database_helper.dart';
+import 'result_page.dart';
 
 class HomeScreenPage extends StatefulWidget {
   final int initialIndex;
@@ -14,8 +15,6 @@ class HomeScreenPage extends StatefulWidget {
 
 class _HomeScreenPageState extends State<HomeScreenPage> {
   late int _selectedIndex;
-
-  // 1. Gumawa ng GlobalKey para ma-access ang state ng HomeView
   final GlobalKey<_HomeViewState> _homeKey = GlobalKey<_HomeViewState>();
 
   @override
@@ -37,7 +36,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
         height: screenHeight,
         child: Stack(
           children: [
-            // --- Top Section (Image/Logo) ---
+            // --- Top Section ---
             Positioned(
               top: 0,
               left: 0,
@@ -105,7 +104,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
               ),
             ),
 
-            // --- Main Content (IndexedStack) ---
+            // --- Main Content Area ---
             Positioned(
               top: topSectionHeight - 20,
               left: 0,
@@ -131,7 +130,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
                       child: IndexedStack(
                         index: _selectedIndex,
                         children: [
-                          HomeView(key: _homeKey), // 2. Ipasa ang Key dito
+                          HomeView(key: _homeKey),
                           const Center(child: Text("Ready to Scan")),
                           const ListViewWidget(),
                         ],
@@ -195,12 +194,10 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
             context,
             MaterialPageRoute(builder: (context) => const CamOpen()),
           );
-          // Pagbalik galing Cam, i-refresh ang Home
           setState(() => _selectedIndex = 0);
           _homeKey.currentState?.refreshData();
         } else {
           setState(() => _selectedIndex = index);
-          // 3. Kung pinindot ang Home tab o List tab, siguruhing updated ang data
           if (index == 0) {
             _homeKey.currentState?.refreshData();
           }
@@ -244,7 +241,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
 }
 
 // ─────────────────────────────────────────
-// HOME VIEW — Idinagdag ang refreshData method
+// HOME VIEW (RECENTS)
 // ─────────────────────────────────────────
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -260,22 +257,24 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    refreshData(); // 4. Gamitin ang iisang method para sa loading
+    refreshData();
   }
 
-  // 5. Ginawang public para matawag ng HomeScreenPage gamit ang GlobalKey
   Future<void> refreshData() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-
     final all = await DatabaseHelper.instance.getAllResults();
-
     if (mounted) {
       setState(() {
         _recentResults = all.take(3).toList();
         _isLoading = false;
       });
     }
+  }
+
+  String _getFormattedDate() {
+    final now = DateTime.now();
+    return "${now.year}-${now.month}-${now.day}";
   }
 
   Color _getPredictionColor(String prediction) {
@@ -331,14 +330,31 @@ class _HomeViewState extends State<HomeView> {
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
+                elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                   side: const BorderSide(color: Color(0xFFE8E9E9)),
                 ),
-                color: Colors.white,
-                elevation: 0,
+                clipBehavior: Clip.antiAlias,
                 child: ListTile(
+                  tileColor: Colors.white,
                   contentPadding: const EdgeInsets.all(16),
+                  onTap: () {
+                    // Ginagamit ang data mula sa 'result' object ng database
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ResultPage(
+                          imagePath: result.imagePath,
+                          prediction: result.prediction,
+                          confidence: result.confidence.toString(),
+                          phLevel: result.phLevel.toString(),
+                          phStatus: result.phStatus ?? "Unknown",
+                          date: result.date,
+                        ),
+                      ),
+                    );
+                  },
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -355,7 +371,7 @@ class _HomeViewState extends State<HomeView> {
                     'SOM: ${result.prediction}\npH: ${result.phLevel}\n${result.date}',
                     style: const TextStyle(height: 1.5),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
                 ),
               );
             },
