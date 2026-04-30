@@ -15,6 +15,9 @@ class HomeScreenPage extends StatefulWidget {
 class _HomeScreenPageState extends State<HomeScreenPage> {
   late int _selectedIndex;
 
+  // 1. Gumawa ng GlobalKey para ma-access ang state ng HomeView
+  final GlobalKey<_HomeViewState> _homeKey = GlobalKey<_HomeViewState>();
+
   @override
   void initState() {
     super.initState();
@@ -34,7 +37,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
         height: screenHeight,
         child: Stack(
           children: [
-            // ── Top image section ──
+            // --- Top Section (Image/Logo) ---
             Positioned(
               top: 0,
               left: 0,
@@ -70,29 +73,26 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
                               height: screenHeight * 0.04,
                               fit: BoxFit.contain,
                             ),
-                            SizedBox(height: screenHeight * 0.005),
                             const Text(
                               'Rise & Brew',
                               style: TextStyle(
-                                fontFamily: 'Inter',
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                                 color: Colors.white,
-                                letterSpacing: 0.12,
                               ),
                             ),
-                            SizedBox(height: screenHeight * 0.02),
                             const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 40),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 10,
+                              ),
                               child: Text(
                                 "Hi! Let's keep your goals blooming today.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontFamily: 'Inter',
                                   fontWeight: FontWeight.w500,
                                   fontSize: 14,
                                   color: Colors.white,
-                                  height: 1.43,
                                 ),
                               ),
                             ),
@@ -105,7 +105,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
               ),
             ),
 
-            // ── Bottom sheet ──
+            // --- Main Content (IndexedStack) ---
             Positioned(
               top: topSectionHeight - 20,
               left: 0,
@@ -127,21 +127,18 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
                       width: screenWidth * 0.34,
                       height: 3,
                     ),
-                    SizedBox(height: screenHeight * 0.01),
-
-                    // ── Page content ──
                     Expanded(
                       child: IndexedStack(
                         index: _selectedIndex,
                         children: [
-                          const HomeView(), // Tab 0
-                          const Center(child: Text("Ready to Scan")), // Tab 1
-                          const ListViewWidget(), // Tab 2
+                          HomeView(key: _homeKey), // 2. Ipasa ang Key dito
+                          const Center(child: Text("Ready to Scan")),
+                          const ListViewWidget(),
                         ],
                       ),
                     ),
 
-                    // ── Bottom Nav ──
+                    // --- Bottom Navigation ---
                     Container(
                       width: screenWidth,
                       height: screenHeight * 0.105,
@@ -187,34 +184,38 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
     IconData icon,
     String label,
     int index,
-    double screenWidth,
-    double screenHeight,
+    double sw,
+    double sh,
   ) {
     final isActive = _selectedIndex == index;
     return GestureDetector(
       onTap: () async {
         if (index == 1) {
-          // Open Camera Page
           await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const CamOpen()),
           );
-          // Pagbalik, pilitin nating mag-index 0 para ma-trigger ang HomeView update
+          // Pagbalik galing Cam, i-refresh ang Home
           setState(() => _selectedIndex = 0);
+          _homeKey.currentState?.refreshData();
         } else {
           setState(() => _selectedIndex = index);
+          // 3. Kung pinindot ang Home tab o List tab, siguruhing updated ang data
+          if (index == 0) {
+            _homeKey.currentState?.refreshData();
+          }
         }
       },
       child: Container(
-        width: screenWidth * 0.32,
-        height: screenHeight * 0.11,
-        color: Colors.transparent, // Mas maganda ito para sa touch area
+        width: sw * 0.32,
+        height: sh * 0.11,
+        color: Colors.transparent,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (isActive)
               Container(
-                width: screenWidth * 0.2,
+                width: sw * 0.2,
                 height: 4,
                 color: const Color(0xFF187B4D),
               )
@@ -230,7 +231,6 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Poppins',
                 fontSize: 12,
                 color: isActive ? Colors.black : Colors.black54,
               ),
@@ -244,7 +244,7 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
 }
 
 // ─────────────────────────────────────────
-// HOME VIEW — Updates automatically
+// HOME VIEW — Idinagdag ang refreshData method
 // ─────────────────────────────────────────
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -260,23 +260,18 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    _loadRecent();
+    refreshData(); // 4. Gamitin ang iisang method para sa loading
   }
 
-  // Ginagamit ito para ma-detect kung kailangan mag-refresh
-  // kapag ang widget ay naging visible ulit sa IndexedStack
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadRecent();
-  }
+  // 5. Ginawang public para matawag ng HomeScreenPage gamit ang GlobalKey
+  Future<void> refreshData() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
 
-  Future<void> _loadRecent() async {
     final all = await DatabaseHelper.instance.getAllResults();
+
     if (mounted) {
       setState(() {
-        // Alisin ang .reversed dahil ang database query ay naka 'id DESC' na.
-        // Ang take(3) ay kukuha ng pinaka-top (pinakabago) na 3 items.
         _recentResults = all.take(3).toList();
         _isLoading = false;
       });
