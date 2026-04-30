@@ -1,9 +1,7 @@
-// list_view.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'homescreen_page.dart';
-import 'cam_open.dart';
 
 class ListViewWidget extends StatefulWidget {
   const ListViewWidget({super.key});
@@ -23,20 +21,64 @@ class _ListViewWidgetState extends State<ListViewWidget> {
   }
 
   Future<void> _loadResults() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     final results = await DatabaseHelper.instance.getAllResults();
-    setState(() {
-      _results = results;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _results = results;
+        _isLoading = false;
+      });
+    }
   }
 
-  Future<void> _deleteResult(int id) async {
-    await DatabaseHelper.instance.deleteResult(id);
-    _loadResults();
+  // ── DELETE LOGIC ──
+  void _confirmDelete(SoilResult result) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            "Delete Record?",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            "Sigurado ka bang gusto mong burahin ang record para sa ${result.farmName}?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (result.id != null) {
+                  await DatabaseHelper.instance.deleteResult(result.id!);
+                  Navigator.pop(context);
+                  _loadResults();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Record deleted")),
+                  );
+                }
+              },
+              child: const Text(
+                "Delete",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  // ── Popup on image tap ──
+  // ── Result Popup ──
   void _showResultPopup(BuildContext context, SoilResult result) {
     final Color predColor = _getPredictionColor(result.prediction);
     final String predEmoji = _getPredictionEmoji(result.prediction);
@@ -58,7 +100,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Handle ──
             Container(
               width: 40,
               height: 4,
@@ -68,8 +109,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // ── Image ──
+            // Image
             Container(
               width: 100,
               height: 100,
@@ -84,25 +124,24 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                   ? Image.file(File(result.imagePath), fit: BoxFit.cover)
                   : const Icon(Icons.image, size: 40, color: Colors.grey),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
+            Text(
+              result.farmName,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             Text(
               result.date,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF71717A),
-                fontFamily: 'Inter',
-              ),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF71717A)),
             ),
             const SizedBox(height: 16),
-
-            // ── SOM Prediction ──
+            // SOM Prediction Box
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
               decoration: BoxDecoration(
-                color: predColor.withValues(alpha: 0.08),
+                color: predColor.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: predColor.withValues(alpha: 0.3)),
+                border: Border.all(color: predColor.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
@@ -115,7 +154,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                         Text(
                           result.prediction,
                           style: TextStyle(
-                            fontFamily: 'Inter',
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
                             color: predColor,
@@ -134,7 +172,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                   Text(
                     '${confidence.toStringAsFixed(1)}%',
                     style: TextStyle(
-                      fontFamily: 'Inter',
                       fontWeight: FontWeight.w800,
                       fontSize: 20,
                       color: predColor,
@@ -143,47 +180,11 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
-
-            // ── Confidence Bar ──
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Confidence',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF71717A)),
-                    ),
-                    Text(
-                      '${confidence.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: predColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: (confidence / 100).clamp(0.0, 1.0),
-                    minHeight: 6,
-                    backgroundColor: const Color(0xFFF4F4F5),
-                    valueColor: AlwaysStoppedAnimation<Color>(predColor),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // ── pH Info ──
+            const SizedBox(height: 12),
+            // pH Info
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFFF4F4F5),
                 borderRadius: BorderRadius.circular(10),
@@ -198,87 +199,48 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                   const SizedBox(width: 8),
                   Text(
                     'pH Level: ${result.phLevel} — ${result.phStatus}',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF09090B),
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 10),
-
-            // ── Coffee Suitability ──
+            const SizedBox(height: 12),
+            // Suitability
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: result.isSuitable
                     ? const Color(0xFFE8F5E9)
                     : const Color(0xFFFFEBEE),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
-                children: [
-                  Text(
-                    result.isSuitable ? '☕' : '⚠️',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      result.isSuitable
-                          ? 'Angkop para sa coffee cultivation sa Amadeo'
-                          : 'Hindi pa angkop para sa coffee cultivation',
-                      style: TextStyle(
-                        color: result.isSuitable
-                            ? const Color(0xFF2E7D32)
-                            : const Color(0xFFC62828),
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
+              child: Text(
+                result.isSuitable
+                    ? '☕ Angkop para sa kape'
+                    : '⚠️ Hindi pa angkop sa kape',
+                style: TextStyle(
+                  color: result.isSuitable
+                      ? Colors.green.shade800
+                      : Colors.red.shade800,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 20),
-
-            // ── Close Button ──
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.black,
-                  side: const BorderSide(color: Color(0xFFE0E0E0)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  minimumSize: const Size(double.infinity, 40),
-                ),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                ),
+                child: const Text('Close'),
               ),
             ),
-            const SizedBox(height: 8),
           ],
         ),
       ),
     );
   }
 
-  // ─────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -286,40 +248,28 @@ class _ListViewWidgetState extends State<ListViewWidget> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Go Back Home Button ──
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const HomeScreenPage(initialIndex: 0),
-                    ),
-                    (route) => false,
-                  );
-                },
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.arrow_back, size: 20, color: Colors.black),
-                    SizedBox(width: 6),
-                    Text(
-                      'Go back home',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 20,
-                        color: Colors.black,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const HomeScreenPage(initialIndex: 0),
                       ),
+                      (route) => false,
                     ),
-                  ],
-                ),
+                  ),
+                  const Text(
+                    'Field Records',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  ),
+                ],
               ),
             ),
-
-            // ── Content ──
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -337,135 +287,132 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
-  // ── Empty State ──
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.landscape_outlined, size: 64, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
+          const Text(
             'No saved results yet',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade400,
-              fontFamily: 'Inter',
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Scan a soil sample to get started',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade400,
-              fontFamily: 'Inter',
-            ),
+            style: TextStyle(color: Colors.grey),
           ),
         ],
       ),
     );
   }
 
-  // ── Gallery Grid ──
   Widget _buildGalleryGrid() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 0.85,
-        ),
-        itemCount: _results.length,
-        itemBuilder: (context, index) {
-          return _buildGalleryCard(_results[index]);
-        },
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.8,
       ),
+      itemCount: _results.length,
+      itemBuilder: (context, index) => _buildGalleryCard(_results[index]),
     );
   }
 
-  // ── Gallery Card ──
   Widget _buildGalleryCard(SoilResult result) {
     final Color predColor = _getPredictionColor(result.prediction);
     final String predEmoji = _getPredictionEmoji(result.prediction);
 
     return GestureDetector(
       onTap: () => _showResultPopup(context, result),
+      onLongPress: () => _confirmDelete(result),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Image ──
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-                child:
-                    result.imagePath.isNotEmpty &&
-                        File(result.imagePath).existsSync()
-                    ? Image.file(
-                        File(result.imagePath),
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        color: const Color(0xFFD9D9D9),
-                        child: const Center(
-                          child: Icon(
-                            Icons.image,
-                            size: 40,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-
-            // ── Info ──
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(predEmoji, style: const TextStyle(fontSize: 12)),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          result.prediction,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                            color: predColor,
+          ],
+        ),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child:
+                        result.imagePath.isNotEmpty &&
+                            File(result.imagePath).existsSync()
+                        ? Image.file(
+                            File(result.imagePath),
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(Icons.image, color: Colors.grey),
                           ),
-                          overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        result.farmName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Row(
+                        children: [
+                          Text(predEmoji, style: const TextStyle(fontSize: 10)),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              result.prediction,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: predColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'pH ${result.phLevel} • ${result.date}',
+                        style: const TextStyle(fontSize: 9, color: Colors.grey),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'pH ${result.phLevel} • ${result.date}',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 10,
-                      color: Color(0xFF71717A),
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+            // Delete Icon Button
+            Positioned(
+              top: 5,
+              right: 5,
+              child: GestureDetector(
+                onTap: () => _confirmDelete(result),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    shape: BoxShape.circle,
                   ),
-                ],
+                  child: const Icon(Icons.close, size: 14, color: Colors.white),
+                ),
               ),
             ),
           ],
@@ -474,53 +421,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
-  Widget _buildNavItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 83.37,
-        height: 85.5,
-        child: Column(
-          children: [
-            if (isActive)
-              Container(width: 83, height: 4, color: const Color(0xFF187B4D))
-            else
-              const SizedBox(height: 4),
-            const Spacer(),
-            Icon(
-              icon,
-              size: 26,
-              color: isActive
-                  ? const Color(0xFF187B4D)
-                  : Colors.black.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.8,
-                fontWeight: FontWeight.w300,
-                color: isActive
-                    ? Colors.black
-                    : Colors.black.withValues(alpha: 0.5),
-              ),
-            ),
-            const Spacer(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────
-  // HELPERS
-  // ─────────────────────────────────────────
+  // --- HELPERS (Same as your logic) ---
   Color _getPredictionColor(String prediction) {
     switch (prediction.toLowerCase()) {
       case 'highly sufficient':
