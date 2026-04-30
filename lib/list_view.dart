@@ -58,7 +58,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-
             // ── Handle ──
             Container(
               width: 40,
@@ -79,8 +78,9 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                 color: const Color(0xFFD9D9D9),
               ),
               clipBehavior: Clip.antiAlias,
-              child: result.imagePath.isNotEmpty &&
-                  File(result.imagePath).existsSync()
+              child:
+                  result.imagePath.isNotEmpty &&
+                      File(result.imagePath).existsSync()
                   ? Image.file(File(result.imagePath), fit: BoxFit.cover)
                   : const Icon(Icons.image, size: 40, color: Colors.grey),
             ),
@@ -98,18 +98,15 @@ class _ListViewWidgetState extends State<ListViewWidget> {
             // ── SOM Prediction ──
             Container(
               width: double.infinity,
-              padding:
-              const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
               decoration: BoxDecoration(
                 color: predColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
-                border:
-                Border.all(color: predColor.withValues(alpha: 0.3)),
+                border: Border.all(color: predColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Text(predEmoji,
-                      style: const TextStyle(fontSize: 22)),
+                  Text(predEmoji, style: const TextStyle(fontSize: 22)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -157,8 +154,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                   children: [
                     const Text(
                       'Confidence',
-                      style: TextStyle(
-                          fontSize: 11, color: Color(0xFF71717A)),
+                      style: TextStyle(fontSize: 11, color: Color(0xFF71717A)),
                     ),
                     Text(
                       '${confidence.toStringAsFixed(1)}%',
@@ -177,8 +173,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                     value: (confidence / 100).clamp(0.0, 1.0),
                     minHeight: 6,
                     backgroundColor: const Color(0xFFF4F4F5),
-                    valueColor:
-                    AlwaysStoppedAnimation<Color>(predColor),
+                    valueColor: AlwaysStoppedAnimation<Color>(predColor),
                   ),
                 ),
               ],
@@ -188,16 +183,18 @@ class _ListViewWidgetState extends State<ListViewWidget> {
             // ── pH Info ──
             Container(
               width: double.infinity,
-              padding:
-              const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
               decoration: BoxDecoration(
                 color: const Color(0xFFF4F4F5),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.water_drop,
-                      size: 18, color: Color(0xFF2563EB)),
+                  const Icon(
+                    Icons.water_drop,
+                    size: 18,
+                    color: Color(0xFF2563EB),
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'pH Level: ${result.phLevel} — ${result.phStatus}',
@@ -216,8 +213,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
             // ── Coffee Suitability ──
             Container(
               width: double.infinity,
-              padding:
-              const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
               decoration: BoxDecoration(
                 color: result.isSuitable
                     ? const Color(0xFFE8F5E9)
@@ -290,50 +286,47 @@ class _ListViewWidgetState extends State<ListViewWidget> {
       body: SafeArea(
         child: Column(
           children: [
-
-            // ── Add Field Button ──
+            // ── Go Back Home Button ──
             const SizedBox(height: 16),
-            Container(
-              width: 364,
-              height: 36,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(6),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add, color: Colors.white, size: 16),
-                  SizedBox(width: 8),
-                  Text(
-                    'Add Field',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const HomeScreenPage(initialIndex: 0),
                     ),
-                  ),
-                ],
+                    (route) => false,
+                  );
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.arrow_back, size: 20, color: Colors.black),
+                    SizedBox(width: 6),
+                    Text(
+                      'Go back home',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 20,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 16),
 
             // ── Content ──
             Expanded(
               child: _isLoading
                   ? const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF187B4D),
-                ),
-              )
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF187B4D),
+                      ),
+                    )
                   : _results.isEmpty
                   ? _buildEmptyState()
                   : _buildGalleryGrid(),
@@ -350,8 +343,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.landscape_outlined,
-              size: 64, color: Colors.grey.shade300),
+          Icon(Icons.landscape_outlined, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
             'No saved results yet',
@@ -411,7 +403,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ── Image ──
             Expanded(
               child: ClipRRect(
@@ -419,20 +410,24 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
                 ),
-                child: result.imagePath.isNotEmpty &&
-                    File(result.imagePath).existsSync()
+                child:
+                    result.imagePath.isNotEmpty &&
+                        File(result.imagePath).existsSync()
                     ? Image.file(
-                  File(result.imagePath),
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                )
+                        File(result.imagePath),
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
                     : Container(
-                  color: const Color(0xFFD9D9D9),
-                  child: const Center(
-                    child: Icon(Icons.image,
-                        size: 40, color: Colors.grey),
-                  ),
-                ),
+                        color: const Color(0xFFD9D9D9),
+                        child: const Center(
+                          child: Icon(
+                            Icons.image,
+                            size: 40,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
               ),
             ),
 
@@ -444,8 +439,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                 children: [
                   Row(
                     children: [
-                      Text(predEmoji,
-                          style: const TextStyle(fontSize: 12)),
+                      Text(predEmoji, style: const TextStyle(fontSize: 12)),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -481,12 +475,12 @@ class _ListViewWidgetState extends State<ListViewWidget> {
   }
 
   Widget _buildNavItem(
-      BuildContext context, {
-        required IconData icon,
-        required String label,
-        required bool isActive,
-        required VoidCallback onTap,
-      }) {
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
@@ -529,21 +523,31 @@ class _ListViewWidgetState extends State<ListViewWidget> {
   // ─────────────────────────────────────────
   Color _getPredictionColor(String prediction) {
     switch (prediction.toLowerCase()) {
-      case 'highly sufficient':   return const Color(0xFF16A34A);
-      case 'sufficient':          return const Color(0xFF2563EB);
-      case 'slightly sufficient': return const Color(0xFFD97706);
-      case 'not sufficient':      return const Color(0xFFDC2626);
-      default:                    return Colors.grey;
+      case 'highly sufficient':
+        return const Color(0xFF16A34A);
+      case 'sufficient':
+        return const Color(0xFF2563EB);
+      case 'slightly sufficient':
+        return const Color(0xFFD97706);
+      case 'not sufficient':
+        return const Color(0xFFDC2626);
+      default:
+        return Colors.grey;
     }
   }
 
   String _getPredictionEmoji(String prediction) {
     switch (prediction.toLowerCase()) {
-      case 'highly sufficient':   return '🟢';
-      case 'sufficient':          return '🔵';
-      case 'slightly sufficient': return '🟡';
-      case 'not sufficient':      return '🔴';
-      default:                    return '⚪';
+      case 'highly sufficient':
+        return '🟢';
+      case 'sufficient':
+        return '🔵';
+      case 'slightly sufficient':
+        return '🟡';
+      case 'not sufficient':
+        return '🔴';
+      default:
+        return '⚪';
     }
   }
 }

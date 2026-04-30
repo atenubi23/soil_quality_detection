@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'list_view.dart';
+import 'homescreen_page.dart';
 
 class ResultPage extends StatefulWidget {
   final String imagePath;
@@ -37,21 +38,31 @@ class _ResultPageState extends State<ResultPage> {
   // ─────────────────────────────────────────
   Color _getPredictionColor() {
     switch (widget.prediction.toLowerCase()) {
-      case 'highly sufficient':   return const Color(0xFF16A34A);
-      case 'sufficient':          return const Color(0xFF2563EB);
-      case 'slightly sufficient': return const Color(0xFFD97706);
-      case 'not sufficient':      return const Color(0xFFDC2626);
-      default:                    return Colors.grey;
+      case 'highly sufficient':
+        return const Color(0xFF16A34A);
+      case 'sufficient':
+        return const Color(0xFF2563EB);
+      case 'slightly sufficient':
+        return const Color(0xFFD97706);
+      case 'not sufficient':
+        return const Color(0xFFDC2626);
+      default:
+        return Colors.grey;
     }
   }
 
   String _getPredictionEmoji() {
     switch (widget.prediction.toLowerCase()) {
-      case 'highly sufficient':   return '🟢';
-      case 'sufficient':          return '🔵';
-      case 'slightly sufficient': return '🟡';
-      case 'not sufficient':      return '🔴';
-      default:                    return '⚪';
+      case 'highly sufficient':
+        return '🟢';
+      case 'sufficient':
+        return '🔵';
+      case 'slightly sufficient':
+        return '🟡';
+      case 'not sufficient':
+        return '🔴';
+      default:
+        return '⚪';
     }
   }
 
@@ -68,17 +79,13 @@ class _ResultPageState extends State<ResultPage> {
       context: context,
       barrierDismissible: false,
       builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-
-              // ── X Close ──
               Align(
                 alignment: Alignment.topRight,
                 child: GestureDetector(
@@ -87,18 +94,13 @@ class _ResultPageState extends State<ResultPage> {
                 ),
               ),
               const SizedBox(height: 4),
-
-              // ── Check Icon ──
               Container(
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8F5E9),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF4CAF50),
-                    width: 2,
-                  ),
+                  border: Border.all(color: const Color(0xFF4CAF50), width: 2),
                 ),
                 child: const Icon(
                   Icons.check_rounded,
@@ -107,8 +109,6 @@ class _ResultPageState extends State<ResultPage> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // ── Title ──
               const Text(
                 'Field Recorded Successfully!',
                 style: TextStyle(
@@ -120,8 +120,6 @@ class _ResultPageState extends State<ResultPage> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-
-              // ── Subtitle ──
               const Text(
                 'The soil scan result has been saved to your field records. You can view it anytime in the List.',
                 style: TextStyle(
@@ -133,18 +131,14 @@ class _ResultPageState extends State<ResultPage> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-
-              // ── View List Button ──
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context); // close dialog
+                    Navigator.pop(context);
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const ListViewWidget(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const ListViewWidget()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -174,7 +168,7 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   // ─────────────────────────────────────────
-  // SAVE TO FIELD
+  // SAVE TO FIELD LOGIC
   // ─────────────────────────────────────────
   Future<void> _saveToField() async {
     if (_isSaved) return;
@@ -200,14 +194,13 @@ class _ResultPageState extends State<ResultPage> {
         _isSaving = false;
       });
 
-      _showSuccessDialog(); // ← show dialog instead of snackbar
-
+      _showSuccessDialog();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error saving: $e')));
     }
   }
 
@@ -218,8 +211,7 @@ class _ResultPageState extends State<ResultPage> {
   Widget build(BuildContext context) {
     final predColor = _getPredictionColor();
     final predEmoji = _getPredictionEmoji();
-    final double confidenceValue =
-        double.tryParse(widget.confidence) ?? 0.0;
+    final double confidenceValue = double.tryParse(widget.confidence) ?? 0.0;
     final bool goodForCoffee = _isGoodForCoffee();
 
     return Scaffold(
@@ -234,8 +226,7 @@ class _ResultPageState extends State<ResultPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
-                    // ── Back Button ──
+                    // ── Header / Back ──
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: const Row(
@@ -257,7 +248,7 @@ class _ResultPageState extends State<ResultPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ── Main Card ──
+                    // ── Main Data Card ──
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
@@ -269,8 +260,6 @@ class _ResultPageState extends State<ResultPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
-                          // ── Header ──
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -284,15 +273,12 @@ class _ResultPageState extends State<ResultPage> {
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
-                                        color: Color(0xFF09090B),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
                                     Text(
                                       widget.date,
                                       style: const TextStyle(
                                         fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w600,
                                         fontSize: 12,
                                         color: Color(0xFF71717A),
                                       ),
@@ -312,8 +298,7 @@ class _ResultPageState extends State<ResultPage> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-
-                              // ── Image + Overlay ──
+                              // Image Circle
                               Stack(
                                 children: [
                                   Container(
@@ -321,18 +306,19 @@ class _ResultPageState extends State<ResultPage> {
                                     height: 100,
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFD9D9D9),
-                                      borderRadius: BorderRadius.circular(50),
+                                      shape: BoxShape.circle,
                                     ),
                                     clipBehavior: Clip.antiAlias,
                                     child: widget.imagePath.isNotEmpty
                                         ? Image.file(
-                                      File(widget.imagePath),
-                                      fit: BoxFit.cover,
-                                    )
-                                        : const Center(
-                                      child: Icon(Icons.image,
-                                          size: 40, color: Colors.grey),
-                                    ),
+                                            File(widget.imagePath),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : const Icon(
+                                            Icons.image,
+                                            size: 40,
+                                            color: Colors.grey,
+                                          ),
                                   ),
                                   Positioned(
                                     bottom: 0,
@@ -341,11 +327,9 @@ class _ResultPageState extends State<ResultPage> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 4,
-                                        horizontal: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.65),
+                                        color: Colors.black.withOpacity(0.65),
                                         borderRadius: const BorderRadius.only(
                                           bottomLeft: Radius.circular(50),
                                           bottomRight: Radius.circular(50),
@@ -367,37 +351,33 @@ class _ResultPageState extends State<ResultPage> {
                             ],
                           ),
                           const SizedBox(height: 16),
-
-                          // ── Prediction Banner ──
+                          // Prediction Banner
                           Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 10,
-                              horizontal: 12,
-                            ),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: predColor.withValues(alpha: 0.08),
+                              color: predColor.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: predColor.withValues(alpha: 0.3),
+                                color: predColor.withOpacity(0.3),
                               ),
                             ),
                             child: Row(
                               children: [
-                                Text(predEmoji,
-                                    style: const TextStyle(fontSize: 20)),
+                                Text(
+                                  predEmoji,
+                                  style: const TextStyle(fontSize: 20),
+                                ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         widget.prediction,
                                         style: TextStyle(
                                           fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
                                           color: predColor,
                                         ),
                                       ),
@@ -406,107 +386,43 @@ class _ResultPageState extends State<ResultPage> {
                                         style: TextStyle(
                                           fontFamily: 'Inter',
                                           fontSize: 11,
-                                          color: predColor
-                                              .withValues(alpha: 0.7),
+                                          color: predColor.withOpacity(0.7),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      '${confidenceValue.toStringAsFixed(1)}%',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 18,
-                                        color: predColor,
-                                      ),
-                                    ),
-                                    Text(
-                                      'confidence',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 10,
-                                        color: predColor
-                                            .withValues(alpha: 0.7),
-                                      ),
-                                    ),
-                                  ],
+                                Text(
+                                  '${confidenceValue.toStringAsFixed(1)}%',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 18,
+                                    color: predColor,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 10),
-
-                          // ── Confidence Bar ──
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Prediction Confidence',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF71717A),
-                                ),
-                              ),
-                              Text(
-                                '${confidenceValue.toStringAsFixed(1)}%',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: predColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: (confidenceValue / 100).clamp(0.0, 1.0),
-                              minHeight: 6,
-                              backgroundColor: const Color(0xFFF4F4F5),
-                              valueColor:
-                              AlwaysStoppedAnimation<Color>(predColor),
-                            ),
-                          ),
                           const SizedBox(height: 16),
-
-                          // ── Tags ──
+                          // Tags
                           Row(
                             children: [
                               _buildTag('Good', active: goodForCoffee),
                               const SizedBox(width: 8),
-                              _buildTag('Bad',
-                                  active: widget.prediction.toLowerCase() ==
-                                      'not sufficient'),
-                              const SizedBox(width: 8),
-                              _buildTag('Neutral',
-                                  active: widget.prediction.toLowerCase() ==
-                                      'slightly sufficient'),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // ── View Details ──
-                          const Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                'View details',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w400,
-                                  fontSize: 12,
-                                  color: Colors.black,
-                                ),
+                              _buildTag(
+                                'Bad',
+                                active:
+                                    widget.prediction.toLowerCase() ==
+                                    'not sufficient',
                               ),
-                              SizedBox(width: 4),
-                              Icon(Icons.arrow_downward,
-                                  size: 18, color: Colors.black),
+                              const SizedBox(width: 8),
+                              _buildTag(
+                                'Neutral',
+                                active:
+                                    widget.prediction.toLowerCase() ==
+                                    'slightly sufficient',
+                              ),
                             ],
                           ),
                         ],
@@ -514,13 +430,10 @@ class _ResultPageState extends State<ResultPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ── Coffee Suitability ──
+                    // ── Coffee Suitability Banner ──
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 14,
-                      ),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: goodForCoffee
                             ? const Color(0xFFE8F5E9)
@@ -551,43 +464,63 @@ class _ResultPageState extends State<ResultPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
 
-                    // ── Save Button ──
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSaved || _isSaving ? null : _saveToField,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                          _isSaved ? Colors.grey : Colors.black,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 44),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    // ── NEW BUTTON SECTION ──
+                    Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        // Save to Field Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _isSaving ? null : _saveToField,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF187B4D),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: _isSaving
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
+                                : Text(
+                                    _isSaved
+                                        ? 'Saved to Records'
+                                        : 'Save to Field',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                           ),
-                          elevation: 0,
                         ),
-                        child: _isSaving
-                            ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                            : Text(
-                          _isSaved ? '✓ Saved!' : 'Save to Field',
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
+                        const SizedBox(height: 12),
+                        // Back to Home Button
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HomeScreenPage(),
+                              ),
+                              (route) => false,
+                            );
+                          },
+                          child: const Text(
+                            'Back to Home',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontFamily: 'Inter',
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
