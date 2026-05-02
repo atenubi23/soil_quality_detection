@@ -1,6 +1,7 @@
 // ph_input.dart
 import 'package:flutter/material.dart';
 import 'result_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PhInputPage extends StatefulWidget {
   final String imagePath;
@@ -32,7 +33,7 @@ class _PhInputPageState extends State<PhInputPage> {
 
   String get _selectedStatusLabel {
     return _statusOptions.firstWhere(
-          (opt) => opt['value'] == _selectedStatus,
+      (opt) => opt['value'] == _selectedStatus,
       orElse: () => _statusOptions[0],
     )['label']!;
   }
@@ -65,18 +66,28 @@ class _PhInputPageState extends State<PhInputPage> {
   String _getFormattedDate() {
     final now = DateTime.now();
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[now.month - 1]}. ${now.day} ${now.year}';
   }
 
-  void _onViewResults() {
+  void _onViewResults() async {
     final phValue = _phController.text.trim();
     if (phValue.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a pH level')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a pH level')));
       return;
     }
 
@@ -88,7 +99,13 @@ class _PhInputPageState extends State<PhInputPage> {
       return;
     }
 
-    // ── Pass ALL real data to ResultPage ──
+    // ── Load farm name from SharedPreferences ──
+    final prefs = await SharedPreferences.getInstance();
+    final farmName =
+        prefs.getString('farm_name') ?? 'Amadeo Farm : Field North';
+
+    if (!mounted) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -99,6 +116,7 @@ class _PhInputPageState extends State<PhInputPage> {
           phLevel: phValue,
           phStatus: _selectedStatusLabel,
           date: _getFormattedDate(),
+          farmName: farmName, // ← ADDED
         ),
       ),
     );
@@ -118,7 +136,6 @@ class _PhInputPageState extends State<PhInputPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     // ── Back Button ──
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
@@ -151,7 +168,9 @@ class _PhInputPageState extends State<PhInputPage> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFF0FDF4),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF187B4D).withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: const Color(0xFF187B4D).withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -204,7 +223,6 @@ class _PhInputPageState extends State<PhInputPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
                             const Text(
                               'You\'re almost there! Please input the pH level of your soil for more accurate analysis.',
                               style: TextStyle(
@@ -231,9 +249,10 @@ class _PhInputPageState extends State<PhInputPage> {
                             // ── pH Text Field ──
                             TextFormField(
                               controller: _phController,
-                              keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               onChanged: _onPhChanged,
                               decoration: InputDecoration(
                                 hintText: '0 - 14',
@@ -251,11 +270,15 @@ class _PhInputPageState extends State<PhInputPage> {
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE0E0E0),
+                                  ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE0E0E0),
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
@@ -281,7 +304,9 @@ class _PhInputPageState extends State<PhInputPage> {
                             const SizedBox(height: 8),
                             Container(
                               decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                                border: Border.all(
+                                  color: const Color(0xFFCBD5E1),
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: DropdownButtonHideUnderline(
@@ -307,7 +332,8 @@ class _PhInputPageState extends State<PhInputPage> {
                                       value: option['value'],
                                       child: Row(
                                         children: [
-                                          if (_selectedStatus == option['value'])
+                                          if (_selectedStatus ==
+                                              option['value'])
                                             const Icon(
                                               Icons.check,
                                               size: 16,
@@ -359,7 +385,9 @@ class _PhInputPageState extends State<PhInputPage> {
                                 onPressed: () => Navigator.pop(context),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF09090B),
-                                  side: const BorderSide(color: Color(0xFFE0E0E0)),
+                                  side: const BorderSide(
+                                    color: Color(0xFFE0E0E0),
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -387,7 +415,6 @@ class _PhInputPageState extends State<PhInputPage> {
           ],
         ),
       ),
-
     );
   }
 }

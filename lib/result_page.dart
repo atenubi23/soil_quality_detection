@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'list_view.dart';
 import 'homescreen_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ResultPage extends StatefulWidget {
   final String imagePath;
@@ -13,7 +14,7 @@ class ResultPage extends StatefulWidget {
   final String phStatus;
   final String date;
   final String farmName;
-  final bool isReadOnly; // Ito ang flag natin
+  final bool isReadOnly;
 
   const ResultPage({
     super.key,
@@ -23,7 +24,7 @@ class ResultPage extends StatefulWidget {
     required this.phLevel,
     required this.phStatus,
     required this.date,
-    this.isReadOnly = false, // Default ay false (para sa fresh scan)
+    this.isReadOnly = false,
     this.farmName = 'Amadeo Farm : Field North',
   });
 
@@ -34,6 +35,32 @@ class ResultPage extends StatefulWidget {
 class _ResultPageState extends State<ResultPage> {
   bool _isSaving = false;
   bool _isSaved = false;
+
+  // ── ADDED: farm name state ──
+  String _farmName = 'Amadeo Farm : Field North';
+
+  // ─────────────────────────────────────────
+  // INIT STATE — load farm name from prefs
+  // ─────────────────────────────────────────
+  @override
+  void initState() {
+    super.initState();
+    _loadFarmName();
+  }
+
+  Future<void> _loadFarmName() async {
+    // If isReadOnly (viewing from history), use the saved farmName from DB
+    // If fresh scan, load from SharedPreferences
+    if (widget.isReadOnly) {
+      setState(() => _farmName = widget.farmName);
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _farmName = prefs.getString('farm_name') ?? widget.farmName;
+      });
+    }
+  }
 
   // ─────────────────────────────────────────
   // HELPERS
@@ -178,7 +205,7 @@ class _ResultPageState extends State<ResultPage> {
 
     try {
       final result = SoilResult(
-        farmName: widget.farmName,
+        farmName: _farmName, // ← CHANGED: from widget.farmName to _farmName
         prediction: widget.prediction,
         confidence: widget.confidence,
         phLevel: widget.phLevel,
@@ -270,7 +297,7 @@ class _ResultPageState extends State<ResultPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      widget.farmName,
+                                      _farmName, // ← CHANGED: from widget.farmName
                                       style: const TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w600,
@@ -468,13 +495,11 @@ class _ResultPageState extends State<ResultPage> {
                     ),
 
                     // ── CONDITIONAL BUTTON SECTION ──
-                    // Kung isReadOnly ay true, hindi ipapakita ang column na ito
                     widget.isReadOnly
                         ? const SizedBox.shrink()
                         : Column(
                             children: [
                               const SizedBox(height: 24),
-                              // Save to Field Button
                               SizedBox(
                                 width: double.infinity,
                                 height: 50,
@@ -504,7 +529,6 @@ class _ResultPageState extends State<ResultPage> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              // Back to Home Button
                               TextButton(
                                 onPressed: () {
                                   Navigator.pushAndRemoveUntil(
