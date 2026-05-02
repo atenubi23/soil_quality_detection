@@ -4,7 +4,7 @@ import 'cam_open.dart';
 import 'list_view.dart';
 import 'database_helper.dart';
 import 'result_page.dart';
-import 'profile.dart'; // ← ADDED
+import 'profile.dart';
 
 class HomeScreenPage extends StatefulWidget {
   final int initialIndex;
@@ -377,6 +377,7 @@ class _HomeViewState extends State<HomeView> {
                                 phLevel: result.phLevel.toString(),
                                 phStatus: result.phStatus ?? "Stable",
                                 date: result.date,
+                                farmName: result.farmName,
                                 isReadOnly: true,
                               ),
                             ),

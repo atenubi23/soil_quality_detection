@@ -10,6 +10,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _farmNameController = TextEditingController();
   bool _isEditing = false;
   bool _isSaving = false;
@@ -23,15 +24,34 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
+      _usernameController.text = prefs.getString('username') ?? '';
       _farmNameController.text =
           prefs.getString('farm_name') ?? 'Amadeo Farm : Field North';
     });
   }
 
   Future<void> _saveProfile() async {
+    final username = _usernameController.text.trim();
+    final farmName = _farmNameController.text.trim();
+
+    if (username.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your username')),
+      );
+      return;
+    }
+
+    if (farmName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your farm name')),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('farm_name', _farmNameController.text.trim());
+    await prefs.setString('username', username);
+    await prefs.setString('farm_name', farmName);
     await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
     setState(() {
@@ -49,6 +69,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _farmNameController.dispose();
     super.dispose();
   }
@@ -87,36 +108,50 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 32),
 
-              // ── Avatar ──
+              // ── Avatar + Username display ──
               Center(
-                child: Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFF187B4D),
-                      width: 2,
+                child: Column(
+                  children: [
+                    Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF187B4D),
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        size: 48,
+                        color: Color(0xFF187B4D),
+                      ),
                     ),
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    size: 48,
-                    color: Color(0xFF187B4D),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  'Soil Inspector',
-                  style: TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontWeight: FontWeight.w500,
-                    fontSize: 13,
-                    color: Colors.grey.shade500,
-                  ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _usernameController.text.isEmpty
+                          ? 'Soil Inspector'
+                          : _usernameController.text,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: Color(0xFF09090B),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Soil Inspector',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontWeight: FontWeight.w400,
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 32),
@@ -177,6 +212,89 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 20),
 
+                    // ── Username Field ──
+                    const Text(
+                      'Username / Nickname',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                        color: Color(0xFF71717A),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _isEditing
+                        ? TextFormField(
+                            controller: _usernameController,
+                            textCapitalization: TextCapitalization.words,
+                            style: const TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Color(0xFF09090B),
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'e.g. Juan, Farmer123',
+                              hintStyle: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 14,
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.person_outline,
+                                size: 20,
+                                color: Color(0xFF187B4D),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFE0E0E0),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFE0E0E0),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF187B4D),
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF4F4F5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _usernameController.text.isEmpty
+                                  ? 'Not set'
+                                  : _usernameController.text,
+                              style: const TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: Color(0xFF09090B),
+                              ),
+                            ),
+                          ),
+                    const SizedBox(height: 20),
+
                     // ── Farm Name Field ──
                     const Text(
                       'Farm Name',
@@ -191,6 +309,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     _isEditing
                         ? TextFormField(
                             controller: _farmNameController,
+                            textCapitalization: TextCapitalization.words,
                             style: const TextStyle(
                               fontFamily: 'DM Sans',
                               fontWeight: FontWeight.w600,
@@ -198,6 +317,16 @@ class _ProfilePageState extends State<ProfilePage> {
                               color: Color(0xFF09090B),
                             ),
                             decoration: InputDecoration(
+                              hintText: 'e.g. Amadeo Farm : Field North',
+                              hintStyle: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 14,
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.landscape_outlined,
+                                size: 20,
+                                color: Color(0xFF187B4D),
+                              ),
                               filled: true,
                               fillColor: Colors.white,
                               contentPadding: const EdgeInsets.symmetric(
@@ -324,6 +453,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
+              const SizedBox(height: 32),
             ],
           ),
         ),
