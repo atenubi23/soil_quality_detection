@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="rise_and_brew_splash"
+        android:label="Rise and Brew"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

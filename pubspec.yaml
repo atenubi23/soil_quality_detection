@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
   camera: ^0.12.0+1
   permission_handler: ^12.0.1
   google_fonts: ^8.0.2
@@ -53,4 +54,11 @@ flutter:
       fonts:
         - asset: assets/fonts/Poppins-Light.ttf
           weight: 300
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/rise_and_brew_logo.png" # Path kung nasaan ang icon mo
+  adaptive_icon_background: "#FFFFFF" # Kulay ng background (para sa Android)
+  adaptive_icon_foreground: "assets/rise_and_brew_logo.png" # Foreground icon
 
