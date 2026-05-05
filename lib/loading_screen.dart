@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'som_classifier.dart';
-import 'ph_classifier.dart'; // ← ADDED
-import 'result_page.dart'; // ← goes straight to ResultPage now
+import 'ph_classifier.dart';
+import 'result_page.dart';
 
 class LoadingScreen extends StatefulWidget {
   final String imagePath;
@@ -13,7 +13,7 @@ class LoadingScreen extends StatefulWidget {
 
 class _LoadingScreenState extends State<LoadingScreen> {
   final Classifier _somClassifier = Classifier();
-  final PhClassifier _phClassifier = PhClassifier(); // ← ADDED
+  final PhClassifier _phClassifier = PhClassifier();
 
   String _statusText = 'Analyzing soil sample...';
 
@@ -27,17 +27,30 @@ class _LoadingScreenState extends State<LoadingScreen> {
     try {
       // ── Step 1: SOM ──
       _updateStatus('Analyzing SOM level...');
-      await _somClassifier.load();
-      final somResult = await _somClassifier.classify(widget.imagePath);
+      final somResults = await Future.wait([
+        _somClassifier.load().then(
+          (_) => _somClassifier.classify(widget.imagePath),
+        ),
+        Future.delayed(const Duration(seconds: 2)),
+      ]);
+      final somResult = somResults[0] as Map<String, dynamic>;
 
       // ── Step 2: pH ──
       _updateStatus('Analyzing pH level...');
-      await _phClassifier.load();
-      final phResult = await _phClassifier.classify(widget.imagePath);
+      final phResults = await Future.wait([
+        _phClassifier.load().then(
+          (_) => _phClassifier.classify(widget.imagePath),
+        ),
+        Future.delayed(const Duration(seconds: 2)),
+      ]);
+      final phResult = phResults[0] as Map<String, dynamic>;
+
+      // ── Step 3: Finalizing ──
+      _updateStatus('Finalizing results...');
+      await Future.delayed(const Duration(milliseconds: 800));
 
       if (!mounted) return;
 
-      // ── Go straight to ResultPage (no more manual pH input) ──
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -59,7 +72,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
       Navigator.pop(context);
     } finally {
       _somClassifier.dispose();
-      _phClassifier.dispose(); // ← ADDED
+      _phClassifier.dispose();
     }
   }
 
@@ -67,9 +80,6 @@ class _LoadingScreenState extends State<LoadingScreen> {
     if (mounted) setState(() => _statusText = text);
   }
 
-  /// Converts raw label → display label (same format ResultPage expects)
-  /// Ph3–Ph6 = acidic range, Ph7 = neutral
-  /// Based sa iyong 5 classes
   String _formatPhStatus(String rawLabel) {
     switch (rawLabel.trim()) {
       case 'Ph3':

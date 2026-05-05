@@ -35,13 +35,8 @@ class ResultPage extends StatefulWidget {
 class _ResultPageState extends State<ResultPage> {
   bool _isSaving = false;
   bool _isSaved = false;
-
-  // ── ADDED: farm name state ──
   String _farmName = 'Amadeo Farm : Field North';
 
-  // ─────────────────────────────────────────
-  // INIT STATE — load farm name from prefs
-  // ─────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -49,8 +44,6 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   Future<void> _loadFarmName() async {
-    // If isReadOnly (viewing from history), use the saved farmName from DB
-    // If fresh scan, load from SharedPreferences
     if (widget.isReadOnly) {
       setState(() => _farmName = widget.farmName);
     } else {
@@ -63,7 +56,7 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   // ─────────────────────────────────────────
-  // HELPERS
+  // SOM HELPERS
   // ─────────────────────────────────────────
   Color _getPredictionColor() {
     switch (widget.prediction.toLowerCase()) {
@@ -98,6 +91,39 @@ class _ResultPageState extends State<ResultPage> {
   bool _isGoodForCoffee() {
     return widget.prediction.toLowerCase() == 'highly sufficient' ||
         widget.prediction.toLowerCase() == 'sufficient';
+  }
+
+  // ─────────────────────────────────────────
+  // pH HELPERS
+  // ─────────────────────────────────────────
+  Color _getPhColor() {
+    switch (widget.phStatus) {
+      case 'Strongly Acidic (0-3)':
+        return const Color(0xFFDC2626);
+      case 'Weakly Acidic (4-6.9)':
+        return const Color(0xFFD97706);
+      case 'Neutral (7)':
+        return const Color(0xFF16A34A);
+      case 'Strongly Alkaline (7.1-14)':
+        return const Color(0xFF2563EB);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getPhEmoji() {
+    switch (widget.phStatus) {
+      case 'Strongly Acidic (0-3)':
+        return '🔴';
+      case 'Weakly Acidic (4-6.9)':
+        return '🟡';
+      case 'Neutral (7)':
+        return '🟢';
+      case 'Strongly Alkaline (7.1-14)':
+        return '🔵';
+      default:
+        return '⚪';
+    }
   }
 
   // ─────────────────────────────────────────
@@ -197,7 +223,7 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   // ─────────────────────────────────────────
-  // SAVE TO FIELD LOGIC
+  // SAVE TO FIELD
   // ─────────────────────────────────────────
   Future<void> _saveToField() async {
     if (_isSaved) return;
@@ -205,7 +231,7 @@ class _ResultPageState extends State<ResultPage> {
 
     try {
       final result = SoilResult(
-        farmName: _farmName, // ← CHANGED: from widget.farmName to _farmName
+        farmName: _farmName,
         prediction: widget.prediction,
         confidence: widget.confidence,
         phLevel: widget.phLevel,
@@ -240,6 +266,8 @@ class _ResultPageState extends State<ResultPage> {
   Widget build(BuildContext context) {
     final predColor = _getPredictionColor();
     final predEmoji = _getPredictionEmoji();
+    final phColor = _getPhColor();
+    final phEmoji = _getPhEmoji();
     final double confidenceValue = double.tryParse(widget.confidence) ?? 0.0;
     final bool goodForCoffee = _isGoodForCoffee();
 
@@ -297,7 +325,7 @@ class _ResultPageState extends State<ResultPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _farmName, // ← CHANGED: from widget.farmName
+                                      _farmName,
                                       style: const TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w600,
@@ -327,7 +355,7 @@ class _ResultPageState extends State<ResultPage> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              // Image Circle
+                              // ── Image Circle ──
                               Stack(
                                 children: [
                                   Container(
@@ -380,7 +408,8 @@ class _ResultPageState extends State<ResultPage> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          // Prediction Banner
+
+                          // ── SOM Classification Banner ──
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -433,8 +462,64 @@ class _ResultPageState extends State<ResultPage> {
                               ],
                             ),
                           ),
+                          const SizedBox(height: 8),
+
+                          // ── pH Classification Banner ──
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: phColor.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: phColor.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  phEmoji,
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'pH ${widget.phLevel}',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.bold,
+                                          color: phColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        widget.phStatus,
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 11,
+                                          color: phColor.withOpacity(0.7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  'pH ${widget.phLevel}',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 18,
+                                    color: phColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 16),
-                          // Tags
+
+                          // ── Tags ──
                           Row(
                             children: [
                               _buildTag('Good', active: goodForCoffee),
@@ -494,7 +579,7 @@ class _ResultPageState extends State<ResultPage> {
                       ),
                     ),
 
-                    // ── CONDITIONAL BUTTON SECTION ──
+                    // ── Buttons ──
                     widget.isReadOnly
                         ? const SizedBox.shrink()
                         : Column(
