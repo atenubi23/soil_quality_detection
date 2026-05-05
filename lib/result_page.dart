@@ -89,8 +89,13 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   bool _isGoodForCoffee() {
-    return widget.prediction.toLowerCase() == 'highly sufficient' ||
-        widget.prediction.toLowerCase() == 'sufficient';
+    final som = widget.prediction.toLowerCase();
+    final ph = widget.phLevel.trim();
+
+    final somGood = som == 'highly sufficient' || som == 'sufficient';
+    final phGood = ph == '5' || ph == '6' || ph == '7';
+
+    return somGood && phGood;
   }
 
   // ─────────────────────────────────────────
