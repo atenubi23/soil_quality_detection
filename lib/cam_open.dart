@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'homescreen_page.dart';
 import 'loading_screen.dart';
 import 'package:image_picker/image_picker.dart';
-import 'list_view.dart';
 
 class CamOpen extends StatefulWidget {
   const CamOpen({super.key});
@@ -27,9 +25,9 @@ class _CamOpenState extends State<CamOpen> {
     final status = await Permission.camera.request();
     if (!mounted) return;
     if (status != PermissionStatus.granted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Camera permission denied')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Camera permission denied')));
       return;
     }
 
@@ -76,29 +74,26 @@ class _CamOpenState extends State<CamOpen> {
         ),
       ),
       body: _isCameraReady && _cameraController != null
-          ? Center(
-        child: CameraPreview(_cameraController!),
-      )
+          ? Center(child: CameraPreview(_cameraController!))
           : const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.white),
-            SizedBox(height: 16),
-            Text(
-              'Initializing camera...',
-              style: TextStyle(color: Colors.white),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text(
+                    'Initializing camera...',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
             // ── Gallery Button ──
             FloatingActionButton(
               heroTag: 'gallery',
@@ -130,7 +125,8 @@ class _CamOpenState extends State<CamOpen> {
               foregroundColor: Colors.black,
               onPressed: () async {
                 if (_cameraController == null ||
-                    !_cameraController!.value.isInitialized) return;
+                    !_cameraController!.value.isInitialized)
+                  return;
                 try {
                   final photo = await _cameraController!.takePicture();
                   if (!mounted) return;
@@ -149,7 +145,6 @@ class _CamOpenState extends State<CamOpen> {
               },
               child: const Icon(Icons.camera_alt, size: 28),
             ),
-
           ],
         ),
       ),

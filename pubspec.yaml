@@ -37,6 +37,7 @@ flutter:
     - assets/som_labels.txt
     - assets/ph_labels.txt
     - assets/som_model.tflite
+    - assets/ph_model.tflite
     - assets/fonts/
   fonts:
     - family: Inter

@@ -25,25 +25,19 @@ class _LoadingScreenState extends State<LoadingScreen> {
 
   Future<void> _runClassification() async {
     try {
-      // ── Step 1: SOM ──
+      // ── Step 1: SOM — tapos muna bago pumunta sa pH ──
       _updateStatus('Analyzing SOM level...');
-      final somResults = await Future.wait([
-        _somClassifier.load().then(
-          (_) => _somClassifier.classify(widget.imagePath),
-        ),
-        Future.delayed(const Duration(seconds: 2)),
-      ]);
-      final somResult = somResults[0] as Map<String, dynamic>;
+      await _somClassifier.load();
+      final somResult = await _somClassifier.classify(widget.imagePath);
+      _somClassifier.dispose(); // ← dispose agad para malaya ang memory
+      await Future.delayed(const Duration(seconds: 2));
 
-      // ── Step 2: pH ──
+      // ── Step 2: pH — separate, hindi sabay sa SOM ──
       _updateStatus('Analyzing pH level...');
-      final phResults = await Future.wait([
-        _phClassifier.load().then(
-          (_) => _phClassifier.classify(widget.imagePath),
-        ),
-        Future.delayed(const Duration(seconds: 2)),
-      ]);
-      final phResult = phResults[0] as Map<String, dynamic>;
+      await _phClassifier.load();
+      final phResult = await _phClassifier.classify(widget.imagePath);
+      _phClassifier.dispose();
+      await Future.delayed(const Duration(seconds: 2));
 
       // ── Step 3: Finalizing ──
       _updateStatus('Finalizing results...');
@@ -58,7 +52,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
             imagePath: widget.imagePath,
             prediction: somResult['label'] ?? 'Unknown',
             confidence: somResult['confidence'] ?? '0.0',
-            phLevel: phResult['phValue'] ?? '7.0',
+            phLevel: phResult['phValue'] ?? '0',
             phStatus: _formatPhStatus(phResult['label'] ?? ''),
             date: _getFormattedDate(),
           ),
@@ -70,9 +64,6 @@ class _LoadingScreenState extends State<LoadingScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text('Classification error: $e')));
       Navigator.pop(context);
-    } finally {
-      _somClassifier.dispose();
-      _phClassifier.dispose();
     }
   }
 
