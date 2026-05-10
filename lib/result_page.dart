@@ -73,28 +73,37 @@ class _ResultPageState extends State<ResultPage> {
     }
   }
 
-  String _getPredictionEmoji() {
-    switch (widget.prediction.toLowerCase()) {
-      case 'highly sufficient':
-        return '🟢';
-      case 'sufficient':
-        return '🔵';
-      case 'slightly sufficient':
-        return '🟡';
-      case 'not sufficient':
-        return '🔴';
-      default:
-        return '⚪';
-    }
+  // ── Replaced emoji with Widget circle ──
+  Widget _buildColorDot(Color color) {
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+
+  // ── Tag active logic: only one is active ──
+  String _getActiveTag() {
+    final som = widget.prediction.trim().toLowerCase();
+    final ph = double.tryParse(widget.phLevel.trim()) ?? -1;
+    final phGood = ph >= 5.0 && ph <= 7.0;
+
+    if (som == 'not sufficient') return 'Bad';
+
+    // Lahat ng sufficient variants + phGood = Good
+    final somGood = som == 'highly sufficient' || som == 'sufficient';
+
+    if (somGood && phGood) return 'Good';
+
+    return 'Neutral';
   }
 
   bool _isGoodForCoffee() {
-    final som = widget.prediction.toLowerCase();
-    final ph = widget.phLevel.trim();
+    final som = widget.prediction.trim().toLowerCase();
+    final ph = double.tryParse(widget.phLevel.trim()) ?? -1;
+    final phGood = ph >= 5.0 && ph <= 7.0;
 
     final somGood = som == 'highly sufficient' || som == 'sufficient';
-    final phGood = ph == '5' || ph == '6' || ph == '7';
-
     return somGood && phGood;
   }
 
@@ -113,21 +122,6 @@ class _ResultPageState extends State<ResultPage> {
         return const Color(0xFF2563EB);
       default:
         return Colors.grey;
-    }
-  }
-
-  String _getPhEmoji() {
-    switch (widget.phStatus) {
-      case 'Strongly Acidic (0-3)':
-        return '🔴';
-      case 'Weakly Acidic (4-6.9)':
-        return '🟡';
-      case 'Neutral (7)':
-        return '🟢';
-      case 'Strongly Alkaline (7.1-14)':
-        return '🔵';
-      default:
-        return '⚪';
     }
   }
 
@@ -270,11 +264,10 @@ class _ResultPageState extends State<ResultPage> {
   @override
   Widget build(BuildContext context) {
     final predColor = _getPredictionColor();
-    final predEmoji = _getPredictionEmoji();
     final phColor = _getPhColor();
-    final phEmoji = _getPhEmoji();
     final double confidenceValue = double.tryParse(widget.confidence) ?? 0.0;
     final bool goodForCoffee = _isGoodForCoffee();
+    final String activeTag = _getActiveTag();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -398,7 +391,7 @@ class _ResultPageState extends State<ResultPage> {
                                         ),
                                       ),
                                       child: Text(
-                                        '$predEmoji ${confidenceValue.toStringAsFixed(1)}%',
+                                        '${confidenceValue.toStringAsFixed(1)}%',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,
@@ -426,10 +419,8 @@ class _ResultPageState extends State<ResultPage> {
                             ),
                             child: Row(
                               children: [
-                                Text(
-                                  predEmoji,
-                                  style: const TextStyle(fontSize: 20),
-                                ),
+                                // ── Colored dot (replaces emoji) ──
+                                _buildColorDot(predColor),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
@@ -455,6 +446,7 @@ class _ResultPageState extends State<ResultPage> {
                                     ],
                                   ),
                                 ),
+                                // ── Confidence % (right side) ──
                                 Text(
                                   '${confidenceValue.toStringAsFixed(1)}%',
                                   style: TextStyle(
@@ -470,6 +462,7 @@ class _ResultPageState extends State<ResultPage> {
                           const SizedBox(height: 8),
 
                           // ── pH Classification Banner ──
+                          // ── pH Classification Banner ──
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -481,10 +474,7 @@ class _ResultPageState extends State<ResultPage> {
                             ),
                             child: Row(
                               children: [
-                                Text(
-                                  phEmoji,
-                                  style: const TextStyle(fontSize: 20),
-                                ),
+                                _buildColorDot(phColor),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
@@ -511,7 +501,7 @@ class _ResultPageState extends State<ResultPage> {
                                   ),
                                 ),
                                 Text(
-                                  'pH ${widget.phLevel}',
+                                  '${confidenceValue.toStringAsFixed(1)}%', // ← right side %
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontWeight: FontWeight.w800,
@@ -521,28 +511,6 @@ class _ResultPageState extends State<ResultPage> {
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // ── Tags ──
-                          Row(
-                            children: [
-                              _buildTag('Good', active: goodForCoffee),
-                              const SizedBox(width: 8),
-                              _buildTag(
-                                'Bad',
-                                active:
-                                    widget.prediction.toLowerCase() ==
-                                    'not sufficient',
-                              ),
-                              const SizedBox(width: 8),
-                              _buildTag(
-                                'Neutral',
-                                active:
-                                    widget.prediction.toLowerCase() ==
-                                    'slightly sufficient',
-                              ),
-                            ],
                           ),
                         ],
                       ),
@@ -561,9 +529,14 @@ class _ResultPageState extends State<ResultPage> {
                       ),
                       child: Row(
                         children: [
-                          Text(
-                            goodForCoffee ? '☕' : '⚠️',
-                            style: const TextStyle(fontSize: 20),
+                          Icon(
+                            goodForCoffee
+                                ? Icons.coffee
+                                : Icons.warning_amber_rounded,
+                            color: goodForCoffee
+                                ? const Color(0xFF2E7D32)
+                                : const Color(0xFFC62828),
+                            size: 22,
                           ),
                           const SizedBox(width: 10),
                           Expanded(

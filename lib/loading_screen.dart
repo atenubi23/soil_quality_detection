@@ -44,7 +44,6 @@ class _LoadingScreenState extends State<LoadingScreen> {
       await Future.delayed(const Duration(milliseconds: 800));
 
       if (!mounted) return;
-
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -72,19 +71,19 @@ class _LoadingScreenState extends State<LoadingScreen> {
   }
 
   String _formatPhStatus(String rawLabel) {
-    switch (rawLabel.trim()) {
-      case 'Ph3':
+    final cleaned = rawLabel.trim().toLowerCase();
+
+    switch (cleaned) {
+      case 'ph3':
         return 'Strongly Acidic (0-3)';
-      case 'Ph4':
+      case 'ph4':
+      case 'ph5':
+      case 'ph6':
         return 'Weakly Acidic (4-6.9)';
-      case 'Ph5':
-        return 'Weakly Acidic (4-6.9)';
-      case 'Ph6':
-        return 'Weakly Acidic (4-6.9)';
-      case 'Ph7':
+      case 'ph7':
         return 'Neutral (7)';
       default:
-        return rawLabel;
+        return 'Weakly Acidic (4-6.9)'; // ← pansamantala, force return para makita kung logic na ang prob
     }
   }
 
