@@ -15,6 +15,7 @@ class ResultPage extends StatefulWidget {
   final String date;
   final String farmName;
   final bool isReadOnly;
+  final String phConfidence;
 
   const ResultPage({
     super.key,
@@ -26,6 +27,7 @@ class ResultPage extends StatefulWidget {
     required this.date,
     this.isReadOnly = false,
     this.farmName = 'Amadeo Farm : Field North',
+    this.phConfidence = '0.0',
   });
 
   @override
@@ -235,6 +237,7 @@ class _ResultPageState extends State<ResultPage> {
         confidence: widget.confidence,
         phLevel: widget.phLevel,
         phStatus: widget.phStatus,
+        phConfidence: widget.phConfidence,
         date: widget.date,
         imagePath: widget.imagePath,
         isSuitable: _isGoodForCoffee(),
@@ -501,7 +504,7 @@ class _ResultPageState extends State<ResultPage> {
                                   ),
                                 ),
                                 Text(
-                                  '${confidenceValue.toStringAsFixed(1)}%', // ← right side %
+                                  '${widget.phConfidence}%', // ← tama (pH confidence)
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontWeight: FontWeight.w800,

@@ -21,6 +21,7 @@ dependencies:
   image_picker: ^1.0.7 #for gallery access and pick picture
   sqflite: ^2.3.0
   path: ^1.9.0
+  
 
 dev_dependencies:
   flutter_test:
@@ -39,6 +40,7 @@ flutter:
     - assets/som_model.tflite
     - assets/ph_model.tflite
     - assets/fonts/
+
   fonts:
     - family: Inter
       fonts:

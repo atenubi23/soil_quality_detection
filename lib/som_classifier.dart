@@ -21,7 +21,11 @@ class Classifier {
       // 2. I-update ang filename dito mula 'labels.txt' patungong 'som_labels.txt'
       final labelsData = await rootBundle.loadString('assets/som_labels.txt');
 
-      _labels = labelsData.split('\n').where((l) => l.isNotEmpty).toList();
+      _labels = labelsData
+          .split('\n')
+          .map((l) => l.trim())
+          .where((l) => l.isNotEmpty)
+          .toList();
 
       print('SOM Classifier: Model and labels loaded successfully');
     } catch (e) {
@@ -30,12 +34,14 @@ class Classifier {
   }
 
   Future<Map<String, dynamic>> classify(String imagePath) async {
-    if (_interpreter == null) return {'label': 'Error', 'confidence': '0', 'index': -1};
+    if (_interpreter == null)
+      return {'label': 'Error', 'confidence': '0', 'index': -1};
 
     final imageFile = File(imagePath);
     final rawBytes = imageFile.readAsBytesSync();
     final decoded = img.decodeImage(rawBytes);
-    if (decoded == null) return {'label': 'Invalid Image', 'confidence': '0', 'index': -1};
+    if (decoded == null)
+      return {'label': 'Invalid Image', 'confidence': '0', 'index': -1};
 
     // Resize to 200x200
     final resized = img.copyResize(
@@ -45,18 +51,20 @@ class Classifier {
     );
 
     // Image Preprocessing (rescale = 1./255)
-    var input = List.generate(1, (_) =>
-        List.generate(INPUT_SIZE, (y) =>
-            List.generate(INPUT_SIZE, (x) {
-              final pixel = resized.getPixel(x, y);
-              // Ginagamit ang modern 'image' package getter (.r, .g, .b)
-              return [
-                pixel.r / 255.0,
-                pixel.g / 255.0,
-                pixel.b / 255.0,
-              ];
-            })
-        )
+    var input = List.generate(
+      1,
+      (_) => List.generate(
+        INPUT_SIZE,
+        (y) => List.generate(INPUT_SIZE, (x) {
+          final pixel = resized.getPixel(x, y);
+          // Ginagamit ang modern 'image' package getter (.r, .g, .b)
+          return [
+            (pixel.r / 127.5) - 1.0,
+            (pixel.g / 127.5) - 1.0,
+            (pixel.b / 127.5) - 1.0,
+          ];
+        }),
+      ),
     );
 
     // Output buffer: [1, 4] dahil 4 labels lang tayo
@@ -75,9 +83,15 @@ class Classifier {
         maxIndex = i;
       }
     }
-
+    print('=== SOM DEBUG ===');
+    print('Scores: $scores');
+    print('MaxIndex: $maxIndex');
+    print('Labels loaded: $_labels');
+    print('Predicted label: ${_labels[maxIndex]}');
     return {
-      'label': _labels.length > maxIndex ? _labels[maxIndex] : 'Class $maxIndex',
+      'label': _labels.length > maxIndex
+          ? _labels[maxIndex]
+          : 'Class $maxIndex',
       'confidence': (maxScore * 100).toStringAsFixed(1),
       'index': maxIndex,
     };

@@ -376,6 +376,8 @@ class _HomeViewState extends State<HomeView> {
                                 confidence: result.confidence.toString(),
                                 phLevel: result.phLevel.toString(),
                                 phStatus: result.phStatus ?? "Stable",
+                                phConfidence:
+                                    result.phConfidence?.toString() ?? '0.0',
                                 date: result.date,
                                 farmName: result.farmName,
                                 isReadOnly: true,

@@ -18,7 +18,12 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 2, // ← BINAGO: 1 → 2
+      onCreate: _createDB,
+      onUpgrade: _onUpgrade, // ← DAGDAG
+    );
   }
 
   Future _createDB(Database db, int version) async {
@@ -30,11 +35,21 @@ class DatabaseHelper {
         confidence TEXT NOT NULL,
         ph_level TEXT NOT NULL,
         ph_status TEXT NOT NULL,
+        ph_confidence TEXT NOT NULL DEFAULT '0.0',
         date TEXT NOT NULL,
         image_path TEXT NOT NULL,
         is_suitable INTEGER NOT NULL
       )
     ''');
+  }
+
+  // ← DAGDAG: para sa existing installs na version 1 pa
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        "ALTER TABLE soil_results ADD COLUMN ph_confidence TEXT NOT NULL DEFAULT '0.0'",
+      );
+    }
   }
 
   // ── INSERT ──
@@ -43,14 +58,10 @@ class DatabaseHelper {
     return await db.insert('soil_results', result.toMap());
   }
 
-  // ── GET ALL (Revised: Newest first by ID and Date) ──
+  // ── GET ALL ──
   Future<List<SoilResult>> getAllResults() async {
     final db = await instance.database;
-
-    // In-update natin ang orderBy. 'id DESC' ay siguradong
-    // ang pinakahuling entry ang nasa itaas.
     final maps = await db.query('soil_results', orderBy: 'id DESC');
-
     return maps.map((map) => SoilResult.fromMap(map)).toList();
   }
 
@@ -74,6 +85,7 @@ class SoilResult {
   final String confidence;
   final String phLevel;
   final String phStatus;
+  final String phConfidence; // ← DAGDAG
   final String date;
   final String imagePath;
   final bool isSuitable;
@@ -85,6 +97,8 @@ class SoilResult {
     required this.confidence,
     required this.phLevel,
     required this.phStatus,
+    this.phConfidence =
+        '0.0', // ← DAGDAG (may default para hindi mabigo ang old records)
     required this.date,
     required this.imagePath,
     required this.isSuitable,
@@ -92,12 +106,13 @@ class SoilResult {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id, // Isinama ang ID para sa updates kung sakali
+      'id': id,
       'farm_name': farmName,
       'prediction': prediction,
       'confidence': confidence,
       'ph_level': phLevel,
       'ph_status': phStatus,
+      'ph_confidence': phConfidence, // ← DAGDAG
       'date': date,
       'image_path': imagePath,
       'is_suitable': isSuitable ? 1 : 0,
@@ -112,6 +127,7 @@ class SoilResult {
       confidence: map['confidence'] as String,
       phLevel: map['ph_level'] as String,
       phStatus: map['ph_status'] as String,
+      phConfidence: map['ph_confidence'] as String? ?? '0.0', // ← DAGDAG
       date: map['date'] as String,
       imagePath: map['image_path'] as String,
       isSuitable: map['is_suitable'] == 1,

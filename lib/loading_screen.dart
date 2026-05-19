@@ -53,6 +53,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
             confidence: somResult['confidence'] ?? '0.0',
             phLevel: phResult['phValue'] ?? '0',
             phStatus: _formatPhStatus(phResult['label'] ?? ''),
+            phConfidence: phResult['confidence'] ?? '0.0',
             date: _getFormattedDate(),
           ),
         ),
