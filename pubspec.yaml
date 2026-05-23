@@ -39,6 +39,8 @@ flutter:
     - assets/ph_labels.txt
     - assets/som_model.tflite
     - assets/ph_model.tflite
+    - assets/mobilenetv2_model.tflite
+    - assets/ph_mobilenetv2_model.tflite
     - assets/fonts/
 
   fonts:

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/services.dart';
@@ -6,15 +7,17 @@ import 'package:flutter/services.dart';
 class PhClassifier {
   Interpreter? _interpreter;
   List<String> _labels = [];
-  int _numClasses = 5; // ← auto-detected mula sa model
+  int _numClasses = 5;
 
-  static const int INPUT_SIZE = 200;
+  // ✅ Fixed: both models were trained on 224x224, not 200x200
+  static const int INPUT_SIZE = 224;
 
   Future<void> load() async {
     try {
-      _interpreter = await Interpreter.fromAsset('assets/ph_model.tflite');
+      _interpreter = await Interpreter.fromAsset(
+        'assets/ph_mobilenetv2_model.tflite',
+      );
 
-      // ── Auto-detect output classes mula sa model ──
       final outputShape = _interpreter!.getOutputTensor(0).shape;
       _numClasses = outputShape.last;
       print('pH model output shape: $outputShape → $_numClasses classes');
@@ -25,6 +28,7 @@ class PhClassifier {
           .map((l) => l.trim())
           .where((l) => l.isNotEmpty)
           .toList();
+
       print('pH Classifier loaded. Labels: $_labels');
       print('pH label count: ${_labels.length}, model classes: $_numClasses');
     } catch (e) {
@@ -56,6 +60,7 @@ class PhClassifier {
         height: INPUT_SIZE,
       );
 
+      // ✅ Fixed: training used data / 255.0 → range [0, 1]
       var input = List.generate(
         1,
         (_) => List.generate(
@@ -67,14 +72,18 @@ class PhClassifier {
         ),
       );
 
-      // ── Gamitin ang auto-detected _numClasses ──
       var output = List<double>.filled(
         _numClasses,
         0,
       ).reshape([1, _numClasses]);
       _interpreter!.run(input, output);
 
-      final List<double> scores = List<double>.from(output[0]);
+      final List<double> rawScores = List<double>.from(output[0]);
+      print('pH raw output: $rawScores');
+
+      // ✅ Softmax in case model outputs logits instead of probabilities
+      final List<double> scores = _softmax(rawScores);
+      print('pH softmax scores: $scores');
 
       double maxScore = -1.0;
       int maxIndex = -1;
@@ -91,9 +100,9 @@ class PhClassifier {
           ? _labels.last
           : 'Ph7';
 
-      print('pH scores: $scores');
-      print('pH maxIndex: $maxIndex');
-      print('pH raw label: "$label"');
+      print(
+        'pH maxIndex: $maxIndex, label: "$label", confidence: ${(maxScore * 100).toStringAsFixed(1)}%',
+      );
 
       return {
         'label': label,
@@ -105,6 +114,14 @@ class PhClassifier {
       print('pH classify ERROR: $e');
       return {'label': 'Error', 'confidence': '0', 'phValue': '0', 'index': -1};
     }
+  }
+
+  // Softmax to normalize logits into probabilities
+  List<double> _softmax(List<double> logits) {
+    final maxVal = logits.reduce(max);
+    final exps = logits.map((v) => exp(v - maxVal)).toList();
+    final sum = exps.reduce((a, b) => a + b);
+    return exps.map((e) => e / sum).toList();
   }
 
   String _getPhValue(String label) {
