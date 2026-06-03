@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'list_view.dart';  // Import your list_view
-import 'homescreen_page.dart'; //Imports homescreen page
+import 'homescreen_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'onboarding_page.dart';
 
 void main() => runApp(const MyApp());
 
@@ -13,10 +14,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Rise & Brew',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Poppins',
-        useMaterial3: true,
-      ),
+      theme: ThemeData(fontFamily: 'Poppins', useMaterial3: true),
       home: const SplashScreen(),
     );
   }
@@ -52,20 +50,38 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _top = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 408, end: 374.4), weight: 1),
-      TweenSequenceItem(tween: Tween<double>(begin: 374.4, end: 412.6), weight: 1),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 408, end: 374.4),
+        weight: 1,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 374.4, end: 412.6),
+        weight: 1,
+      ),
       TweenSequenceItem(tween: ConstantTween<double>(412.6), weight: 2),
     ]).animate(_controller);
 
     _left = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 156, end: 115.4), weight: 1),
-      TweenSequenceItem(tween: Tween<double>(begin: 115.4, end: 151.6), weight: 1),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 156, end: 115.4),
+        weight: 1,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 115.4, end: 151.6),
+        weight: 1,
+      ),
       TweenSequenceItem(tween: ConstantTween<double>(151.6), weight: 2),
     ]).animate(_controller);
 
     _width = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween<double>(begin: 100, end: 167.08), weight: 1),
-      TweenSequenceItem(tween: Tween<double>(begin: 167.08, end: 99.89), weight: 1),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 100, end: 167.08),
+        weight: 1,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 167.08, end: 99.89),
+        weight: 1,
+      ),
       TweenSequenceItem(tween: ConstantTween<double>(99.89), weight: 2),
     ]).animate(_controller);
     _height = _width;
@@ -80,7 +96,9 @@ class _SplashScreenState extends State<SplashScreen>
       TweenSequenceItem(tween: Tween<double>(begin: 0, end: -48.32), weight: 1),
       TweenSequenceItem(tween: ConstantTween<double>(-48.32), weight: 3),
     ]).animate(_controller);
-    _rotation = _rotation.drive(Tween<double>(begin: 0, end: -48.32 * 3.14159 / 180));
+    _rotation = _rotation.drive(
+      Tween<double>(begin: 0, end: -48.32 * 3.14159 / 180),
+    );
 
     _opacity = TweenSequence<double>([
       TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 3),
@@ -89,15 +107,28 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    _controller.addStatusListener((status) { // goto homepage.dart
+    // ✅ FIXED: hiwalay na async function para walang red await
+    _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
-        // Navigate to ListViewWidget instead of GalleryAccess
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreenPage()),
-        );
+        _navigateAfterSplash();
       }
     });
+  }
+
+  // ✅ Hiwalay na async method
+  Future<void> _navigateAfterSplash() async {
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            onboardingDone ? const HomeScreenPage() : const OnboardingPage(),
+      ),
+    );
   }
 
   @override
@@ -135,7 +166,9 @@ class _SplashScreenState extends State<SplashScreen>
                           width: _width.value * scaleX,
                           height: _height.value * scaleY,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(_borderRadius.value * scaleX),
+                            borderRadius: BorderRadius.circular(
+                              _borderRadius.value * scaleX,
+                            ),
                             gradient: const LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
@@ -177,7 +210,9 @@ class _SplashScreenState extends State<SplashScreen>
                               width: 31.76 * scaleX,
                               height: 31.76 * scaleX,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(22.89 * scaleX),
+                                borderRadius: BorderRadius.circular(
+                                  22.89 * scaleX,
+                                ),
                                 gradient: const LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,

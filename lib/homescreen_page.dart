@@ -4,6 +4,7 @@ import 'cam_open.dart';
 import 'list_view.dart';
 import 'database_helper.dart';
 import 'result_page.dart';
+import 'profile.dart';
 
 class HomeScreenPage extends StatefulWidget {
   final int initialIndex;
@@ -15,14 +16,12 @@ class HomeScreenPage extends StatefulWidget {
 
 class _HomeScreenPageState extends State<HomeScreenPage> {
   late int _selectedIndex;
-  // Gagamitin natin ito para tawagin ang refreshData sa HomeView
   final GlobalKey<_HomeViewState> _homeKey = GlobalKey<_HomeViewState>();
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
-    // Siguraduhin na mag-refresh sa unang load
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _homeKey.currentState?.refreshData();
     });
@@ -101,6 +100,42 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+
+                    // ── Profile Icon (top right) ── ADDED
+                    Positioned(
+                      top: 44,
+                      right: 16,
+                      child: GestureDetector(
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ProfilePage(),
+                            ),
+                          );
+                          // Refresh home after returning from profile
+                          // (in case farm name changed)
+                          _homeKey.currentState?.refreshData();
+                        },
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline,
+                            color: Colors.white,
+                            size: 22,
+                          ),
                         ),
                       ),
                     ),
@@ -195,17 +230,14 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
     return GestureDetector(
       onTap: () async {
         if (index == 1) {
-          // Buksan ang Camera at hintayin ang pagbalik
           await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const CamOpen()),
           );
-          // Pagbalik, FORCE refresh ang Home
           setState(() => _selectedIndex = 0);
           _homeKey.currentState?.refreshData();
         } else {
           setState(() => _selectedIndex = index);
-          // Kung pinindot ang Home icon mismo, i-refresh din
           if (index == 0) {
             _homeKey.currentState?.refreshData();
           }
@@ -268,9 +300,7 @@ class _HomeViewState extends State<HomeView> {
     refreshData();
   }
 
-  // Ginawang public ang method para matawag ng GlobalKey
   Future<void> refreshData() async {
-    // Kinukuha lahat tapos nire-reverse para makuha ang pinakabago
     final all = await DatabaseHelper.instance.getAllResults();
     if (mounted) {
       setState(() {
@@ -337,7 +367,6 @@ class _HomeViewState extends State<HomeView> {
                       ),
                       child: ListTile(
                         onTap: () async {
-                          // Pagbalik galing result page, mag-refresh din dapat
                           await Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -347,7 +376,10 @@ class _HomeViewState extends State<HomeView> {
                                 confidence: result.confidence.toString(),
                                 phLevel: result.phLevel.toString(),
                                 phStatus: result.phStatus ?? "Stable",
+                                phConfidence:
+                                    result.phConfidence?.toString() ?? '0.0',
                                 date: result.date,
+                                farmName: result.farmName,
                                 isReadOnly: true,
                               ),
                             ),
@@ -357,7 +389,7 @@ class _HomeViewState extends State<HomeView> {
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: predColor.withOpacity(0.1),
+                            color: predColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(Icons.grass, color: predColor),

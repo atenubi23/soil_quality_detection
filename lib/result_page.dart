@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'list_view.dart';
 import 'homescreen_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ResultPage extends StatefulWidget {
   final String imagePath;
@@ -13,7 +14,8 @@ class ResultPage extends StatefulWidget {
   final String phStatus;
   final String date;
   final String farmName;
-  final bool isReadOnly; // Ito ang flag natin
+  final bool isReadOnly;
+  final String phConfidence;
 
   const ResultPage({
     super.key,
@@ -23,8 +25,9 @@ class ResultPage extends StatefulWidget {
     required this.phLevel,
     required this.phStatus,
     required this.date,
-    this.isReadOnly = false, // Default ay false (para sa fresh scan)
+    this.isReadOnly = false,
     this.farmName = 'Amadeo Farm : Field North',
+    this.phConfidence = '0.0',
   });
 
   @override
@@ -34,9 +37,28 @@ class ResultPage extends StatefulWidget {
 class _ResultPageState extends State<ResultPage> {
   bool _isSaving = false;
   bool _isSaved = false;
+  String _farmName = 'Amadeo Farm : Field North';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFarmName();
+  }
+
+  Future<void> _loadFarmName() async {
+    if (widget.isReadOnly) {
+      setState(() => _farmName = widget.farmName);
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _farmName = prefs.getString('farm_name') ?? widget.farmName;
+      });
+    }
+  }
 
   // ─────────────────────────────────────────
-  // HELPERS
+  // SOM HELPERS
   // ─────────────────────────────────────────
   Color _getPredictionColor() {
     switch (widget.prediction.toLowerCase()) {
@@ -53,24 +75,56 @@ class _ResultPageState extends State<ResultPage> {
     }
   }
 
-  String _getPredictionEmoji() {
-    switch (widget.prediction.toLowerCase()) {
-      case 'highly sufficient':
-        return '🟢';
-      case 'sufficient':
-        return '🔵';
-      case 'slightly sufficient':
-        return '🟡';
-      case 'not sufficient':
-        return '🔴';
-      default:
-        return '⚪';
-    }
+  // ── Replaced emoji with Widget circle ──
+  Widget _buildColorDot(Color color) {
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+
+  // ── Tag active logic: only one is active ──
+  String _getActiveTag() {
+    final som = widget.prediction.trim().toLowerCase();
+    final ph = double.tryParse(widget.phLevel.trim()) ?? -1;
+    final phGood = ph >= 5.0 && ph <= 7.0;
+
+    if (som == 'not sufficient') return 'Bad';
+
+    // Lahat ng sufficient variants + phGood = Good
+    final somGood = som == 'highly sufficient' || som == 'sufficient';
+
+    if (somGood && phGood) return 'Good';
+
+    return 'Neutral';
   }
 
   bool _isGoodForCoffee() {
-    return widget.prediction.toLowerCase() == 'highly sufficient' ||
-        widget.prediction.toLowerCase() == 'sufficient';
+    final som = widget.prediction.trim().toLowerCase();
+    final ph = double.tryParse(widget.phLevel.trim()) ?? -1;
+    final phGood = ph >= 5.0 && ph <= 7.0;
+
+    final somGood = som == 'highly sufficient' || som == 'sufficient';
+    return somGood && phGood;
+  }
+
+  // ─────────────────────────────────────────
+  // pH HELPERS
+  // ─────────────────────────────────────────
+  Color _getPhColor() {
+    switch (widget.phStatus) {
+      case 'Strongly Acidic (0-3)':
+        return const Color(0xFFDC2626);
+      case 'Weakly Acidic (4-6.9)':
+        return const Color(0xFFD97706);
+      case 'Neutral (7)':
+        return const Color(0xFF16A34A);
+      case 'Strongly Alkaline (7.1-14)':
+        return const Color(0xFF2563EB);
+      default:
+        return Colors.grey;
+    }
   }
 
   // ─────────────────────────────────────────
@@ -170,7 +224,7 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   // ─────────────────────────────────────────
-  // SAVE TO FIELD LOGIC
+  // SAVE TO FIELD
   // ─────────────────────────────────────────
   Future<void> _saveToField() async {
     if (_isSaved) return;
@@ -178,11 +232,12 @@ class _ResultPageState extends State<ResultPage> {
 
     try {
       final result = SoilResult(
-        farmName: widget.farmName,
+        farmName: _farmName,
         prediction: widget.prediction,
         confidence: widget.confidence,
         phLevel: widget.phLevel,
         phStatus: widget.phStatus,
+        phConfidence: widget.phConfidence,
         date: widget.date,
         imagePath: widget.imagePath,
         isSuitable: _isGoodForCoffee(),
@@ -212,9 +267,10 @@ class _ResultPageState extends State<ResultPage> {
   @override
   Widget build(BuildContext context) {
     final predColor = _getPredictionColor();
-    final predEmoji = _getPredictionEmoji();
+    final phColor = _getPhColor();
     final double confidenceValue = double.tryParse(widget.confidence) ?? 0.0;
     final bool goodForCoffee = _isGoodForCoffee();
+    final String activeTag = _getActiveTag();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -270,7 +326,7 @@ class _ResultPageState extends State<ResultPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      widget.farmName,
+                                      _farmName,
                                       style: const TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w600,
@@ -300,7 +356,7 @@ class _ResultPageState extends State<ResultPage> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              // Image Circle
+                              // ── Image Circle ──
                               Stack(
                                 children: [
                                   Container(
@@ -338,7 +394,7 @@ class _ResultPageState extends State<ResultPage> {
                                         ),
                                       ),
                                       child: Text(
-                                        '$predEmoji ${confidenceValue.toStringAsFixed(1)}%',
+                                        '${confidenceValue.toStringAsFixed(1)}%',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,
@@ -353,7 +409,8 @@ class _ResultPageState extends State<ResultPage> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          // Prediction Banner
+
+                          // ── SOM Classification Banner ──
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -365,10 +422,8 @@ class _ResultPageState extends State<ResultPage> {
                             ),
                             child: Row(
                               children: [
-                                Text(
-                                  predEmoji,
-                                  style: const TextStyle(fontSize: 20),
-                                ),
+                                // ── Colored dot (replaces emoji) ──
+                                _buildColorDot(predColor),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
@@ -394,6 +449,7 @@ class _ResultPageState extends State<ResultPage> {
                                     ],
                                   ),
                                 ),
+                                // ── Confidence % (right side) ──
                                 Text(
                                   '${confidenceValue.toStringAsFixed(1)}%',
                                   style: TextStyle(
@@ -406,26 +462,58 @@ class _ResultPageState extends State<ResultPage> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          // Tags
-                          Row(
-                            children: [
-                              _buildTag('Good', active: goodForCoffee),
-                              const SizedBox(width: 8),
-                              _buildTag(
-                                'Bad',
-                                active:
-                                    widget.prediction.toLowerCase() ==
-                                    'not sufficient',
+                          const SizedBox(height: 8),
+
+                          // ── pH Classification Banner ──
+                          // ── pH Classification Banner ──
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: phColor.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: phColor.withOpacity(0.3),
                               ),
-                              const SizedBox(width: 8),
-                              _buildTag(
-                                'Neutral',
-                                active:
-                                    widget.prediction.toLowerCase() ==
-                                    'slightly sufficient',
-                              ),
-                            ],
+                            ),
+                            child: Row(
+                              children: [
+                                _buildColorDot(phColor),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'pH ${widget.phLevel}',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.bold,
+                                          color: phColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        widget.phStatus,
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 11,
+                                          color: phColor.withOpacity(0.7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '${widget.phConfidence}%', // ← tama (pH confidence)
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 18,
+                                    color: phColor,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -444,9 +532,14 @@ class _ResultPageState extends State<ResultPage> {
                       ),
                       child: Row(
                         children: [
-                          Text(
-                            goodForCoffee ? '☕' : '⚠️',
-                            style: const TextStyle(fontSize: 20),
+                          Icon(
+                            goodForCoffee
+                                ? Icons.coffee
+                                : Icons.warning_amber_rounded,
+                            color: goodForCoffee
+                                ? const Color(0xFF2E7D32)
+                                : const Color(0xFFC62828),
+                            size: 22,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -467,14 +560,12 @@ class _ResultPageState extends State<ResultPage> {
                       ),
                     ),
 
-                    // ── CONDITIONAL BUTTON SECTION ──
-                    // Kung isReadOnly ay true, hindi ipapakita ang column na ito
+                    // ── Buttons ──
                     widget.isReadOnly
                         ? const SizedBox.shrink()
                         : Column(
                             children: [
                               const SizedBox(height: 24),
-                              // Save to Field Button
                               SizedBox(
                                 width: double.infinity,
                                 height: 50,
@@ -504,7 +595,6 @@ class _ResultPageState extends State<ResultPage> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              // Back to Home Button
                               TextButton(
                                 onPressed: () {
                                   Navigator.pushAndRemoveUntil(
