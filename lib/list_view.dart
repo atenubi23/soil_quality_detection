@@ -12,12 +12,35 @@ class ListViewWidget extends StatefulWidget {
 
 class _ListViewWidgetState extends State<ListViewWidget> {
   List<SoilResult> _results = [];
+  List<SoilResult> _filtered = [];
   bool _isLoading = true;
+
+  final TextEditingController _searchController = TextEditingController();
+
+  // Filter state
+  String _selectedCategory = 'Lahat'; // 'Lahat', 'Angkop', 'Hindi Angkop'
+  String _selectedSOM = 'Lahat'; // SOM filter
+  bool _showFilters = false;
+
+  final List<String> _somOptions = [
+    'Lahat',
+    'Highly Sufficient',
+    'Sufficient',
+    'Slightly Sufficient',
+    'Not Sufficient',
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadResults();
+    _searchController.addListener(_applyFilters);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadResults() async {
@@ -29,7 +52,36 @@ class _ListViewWidgetState extends State<ListViewWidget> {
         _results = results;
         _isLoading = false;
       });
+      _applyFilters();
     }
+  }
+
+  void _applyFilters() {
+    final query = _searchController.text.toLowerCase().trim();
+
+    setState(() {
+      _filtered = _results.where((r) {
+        // Search filter
+        final matchSearch =
+            query.isEmpty ||
+            r.farmName.toLowerCase().contains(query) ||
+            r.prediction.toLowerCase().contains(query) ||
+            r.date.toLowerCase().contains(query);
+
+        // Suitability category filter
+        final matchCategory =
+            _selectedCategory == 'Lahat' ||
+            (_selectedCategory == 'Angkop' && r.isSuitable) ||
+            (_selectedCategory == 'Hindi Angkop' && !r.isSuitable);
+
+        // SOM filter
+        final matchSOM =
+            _selectedSOM == 'Lahat' ||
+            r.prediction.toLowerCase() == _selectedSOM.toLowerCase();
+
+        return matchSearch && matchCategory && matchSOM;
+      }).toList();
+    });
   }
 
   // ── DELETE LOGIC ──
@@ -56,34 +108,23 @@ class _ListViewWidgetState extends State<ListViewWidget> {
             TextButton(
               onPressed: () async {
                 if (result.id != null) {
-                  // 1. Itago muna ang record sa memory bago i-delete
                   final deletedResult = result;
-                  final deletedIndex = _results.indexOf(result);
-
-                  // 2. I-delete sa Database
                   await DatabaseHelper.instance.deleteResult(result.id!);
-
-                  // 3. I-update ang UI
                   Navigator.pop(context);
                   _loadResults();
-
-                  // 4. Ipakita ang SnackBar na may Undo
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text("Nabura ang record ni ${result.farmName}"),
                       action: SnackBarAction(
                         label: "UNDO",
                         onPressed: () async {
-                          // Ibalik ang record sa database
                           await DatabaseHelper.instance.insertResult(
                             deletedResult,
                           );
-                          _loadResults(); // I-refresh ang listahan
+                          _loadResults();
                         },
                       ),
-                      duration: const Duration(
-                        seconds: 4,
-                      ), // May 4 seconds ang user para mag-undo
+                      duration: const Duration(seconds: 4),
                     ),
                   );
                 }
@@ -133,7 +174,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            // Image
             Container(
               width: 100,
               height: 100,
@@ -158,7 +198,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               style: const TextStyle(fontSize: 12, color: Color(0xFF71717A)),
             ),
             const SizedBox(height: 16),
-            // SOM Prediction Box
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
@@ -205,7 +244,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
             const SizedBox(height: 12),
-            // pH Info
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -229,7 +267,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
             const SizedBox(height: 12),
-            // Suitability
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -273,6 +310,8 @@ class _ListViewWidgetState extends State<ListViewWidget> {
         child: Column(
           children: [
             const SizedBox(height: 16),
+
+            // ── Header ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -291,9 +330,144 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                     'Field Records',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
+                  const Spacer(),
+                  // Filter toggle button
+                  GestureDetector(
+                    onTap: () => setState(() => _showFilters = !_showFilters),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _showFilters
+                            ? const Color(0xFF187B4D)
+                            : const Color(0xFFF0F0F0),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.tune,
+                            size: 16,
+                            color: _showFilters ? Colors.white : Colors.black54,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Filter',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _showFilters
+                                  ? Colors.white
+                                  : Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
+
+            // ── Search Bar ──
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Hanapin ang farm o resulta...',
+                  hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            _applyFilters();
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: const Color(0xFFF5F5F5),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Suitability Category Tabs ──
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              child: Row(
+                children: [
+                  _buildCategoryChip('Lahat'),
+                  const SizedBox(width: 8),
+                  _buildCategoryChip('Angkop'),
+                  const SizedBox(width: 8),
+                  _buildCategoryChip('Hindi Angkop'),
+                ],
+              ),
+            ),
+
+            // ── SOM Filter (collapsible) ──
+            if (_showFilters)
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F8F8),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE8E9E9)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'SOM Classification',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: _somOptions
+                          .map((opt) => _buildSOMChip(opt))
+                          .toList(),
+                    ),
+                  ],
+                ),
+              ),
+
+            // ── Result Count ──
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Text(
+                    '${_filtered.length} record${_filtered.length != 1 ? 's' : ''} na nahanap',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Grid ──
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -301,7 +475,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                         color: Color(0xFF187B4D),
                       ),
                     )
-                  : _results.isEmpty
+                  : _filtered.isEmpty
                   ? _buildEmptyState()
                   : _buildGalleryGrid(),
             ),
@@ -311,16 +485,115 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
+  Widget _buildCategoryChip(String label) {
+    final isSelected = _selectedCategory == label;
+    Color chipColor;
+    Color textColor;
+
+    if (!isSelected) {
+      chipColor = const Color(0xFFF0F0F0);
+      textColor = Colors.black54;
+    } else if (label == 'Angkop') {
+      chipColor = const Color(0xFF16A34A);
+      textColor = Colors.white;
+    } else if (label == 'Hindi Angkop') {
+      chipColor = const Color(0xFFDC2626);
+      textColor = Colors.white;
+    } else {
+      chipColor = const Color(0xFF187B4D);
+      textColor = Colors.white;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedCategory = label);
+        _applyFilters();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: chipColor,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSOMChip(String label) {
+    final isSelected = _selectedSOM == label;
+    final color = isSelected
+        ? const Color(0xFF187B4D)
+        : const Color(0xFFEEEEEE);
+    final textColor = isSelected ? Colors.white : Colors.black54;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedSOM = label);
+        _applyFilters();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
+    final isFiltered =
+        _searchController.text.isNotEmpty ||
+        _selectedCategory != 'Lahat' ||
+        _selectedSOM != 'Lahat';
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.landscape_outlined, size: 64, color: Colors.grey.shade300),
-          const Text(
-            'No saved results yet',
-            style: TextStyle(color: Colors.grey),
+          Icon(
+            isFiltered ? Icons.search_off : Icons.landscape_outlined,
+            size: 64,
+            color: Colors.grey.shade300,
           ),
+          const SizedBox(height: 8),
+          Text(
+            isFiltered ? 'Walang nahanap na record' : 'No saved results yet',
+            style: const TextStyle(color: Colors.grey),
+          ),
+          if (isFiltered) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                _searchController.clear();
+                setState(() {
+                  _selectedCategory = 'Lahat';
+                  _selectedSOM = 'Lahat';
+                });
+                _applyFilters();
+              },
+              child: const Text(
+                'I-clear ang filters',
+                style: TextStyle(color: Color(0xFF187B4D)),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -328,15 +601,15 @@ class _ListViewWidgetState extends State<ListViewWidget> {
 
   Widget _buildGalleryGrid() {
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
         childAspectRatio: 0.8,
       ),
-      itemCount: _results.length,
-      itemBuilder: (context, index) => _buildGalleryCard(_results[index]),
+      itemCount: _filtered.length,
+      itemBuilder: (context, index) => _buildGalleryCard(_filtered[index]),
     );
   }
 
@@ -423,7 +696,31 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                 ),
               ],
             ),
-            // Delete Icon Button
+
+            // ── Suitability Badge ──
+            Positioned(
+              bottom: 48,
+              left: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: result.isSuitable
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  result.isSuitable ? '☕ Angkop' : '⚠️ Hindi Angkop',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Delete Button ──
             Positioned(
               top: 5,
               right: 5,
@@ -445,7 +742,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
-  // --- HELPERS (Same as your logic) ---
+  // ── Helpers ──
   Color _getPredictionColor(String prediction) {
     switch (prediction.toLowerCase()) {
       case 'highly sufficient':
