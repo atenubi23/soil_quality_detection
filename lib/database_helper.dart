@@ -1,4 +1,3 @@
-// database_helper.dart
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -20,9 +19,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2, // ← BINAGO: 1 → 2
+      version: 2,
       onCreate: _createDB,
-      onUpgrade: _onUpgrade, // ← DAGDAG
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -43,7 +42,6 @@ class DatabaseHelper {
     ''');
   }
 
-  // ← DAGDAG: para sa existing installs na version 1 pa
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute(
@@ -65,6 +63,17 @@ class DatabaseHelper {
     return maps.map((map) => SoilResult.fromMap(map)).toList();
   }
 
+  // ── UPDATE ── (FIX: was missing, caused compile error in _showEditDialog)
+  Future<int> updateResult(SoilResult result) async {
+    final db = await instance.database;
+    return await db.update(
+      'soil_results',
+      result.toMap(),
+      where: 'id = ?',
+      whereArgs: [result.id],
+    );
+  }
+
   // ── DELETE ──
   Future<void> deleteResult(int id) async {
     final db = await instance.database;
@@ -80,12 +89,12 @@ class DatabaseHelper {
 // ── Model ──
 class SoilResult {
   final int? id;
-  final String farmName;
+  String farmName; // FIX: was `final` — must be mutable for in-place edit
   final String prediction;
   final String confidence;
   final String phLevel;
   final String phStatus;
-  final String phConfidence; // ← DAGDAG
+  final String phConfidence;
   final String date;
   final String imagePath;
   final bool isSuitable;
@@ -97,8 +106,7 @@ class SoilResult {
     required this.confidence,
     required this.phLevel,
     required this.phStatus,
-    this.phConfidence =
-        '0.0', // ← DAGDAG (may default para hindi mabigo ang old records)
+    this.phConfidence = '0.0',
     required this.date,
     required this.imagePath,
     required this.isSuitable,
@@ -106,13 +114,15 @@ class SoilResult {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      // Omit 'id' when null so SQLite auto-increments on insert;
+      // include it on update so the correct row is targeted.
+      if (id != null) 'id': id,
       'farm_name': farmName,
       'prediction': prediction,
       'confidence': confidence,
       'ph_level': phLevel,
       'ph_status': phStatus,
-      'ph_confidence': phConfidence, // ← DAGDAG
+      'ph_confidence': phConfidence,
       'date': date,
       'image_path': imagePath,
       'is_suitable': isSuitable ? 1 : 0,
@@ -127,7 +137,7 @@ class SoilResult {
       confidence: map['confidence'] as String,
       phLevel: map['ph_level'] as String,
       phStatus: map['ph_status'] as String,
-      phConfidence: map['ph_confidence'] as String? ?? '0.0', // ← DAGDAG
+      phConfidence: map['ph_confidence'] as String? ?? '0.0',
       date: map['date'] as String,
       imagePath: map['image_path'] as String,
       isSuitable: map['is_suitable'] == 1,

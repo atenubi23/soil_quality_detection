@@ -18,14 +18,12 @@ class _ListViewWidgetState extends State<ListViewWidget> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // Filter / sort state
   String _selectedCategory = 'Lahat';
   String _selectedSOM = 'Lahat';
-  String _selectedPH = 'Lahat'; // NEW: pH range filter
-  bool _sortNewest = true; // NEW: sort direction
+  String _selectedPH = 'Lahat';
+  bool _sortNewest = true;
   bool _showFilters = false;
 
-  // How many cards are rendered at once (lazy-render window)
   static const int _pageSize = 20;
   int _visibleCount = _pageSize;
 
@@ -37,12 +35,11 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     'Not Sufficient',
   ];
 
-  // pH range labels mapped to (min, max) inclusive
   final Map<String, (double, double)> _phRanges = {
-    'Lahat': (0, 14),
-    'Acidic\n<6.0': (0, 5.99),
+    'Lahat': (0.0, 14.0),
+    'Acidic\n<6.0': (0.0, 5.99),
     'Optimal\n6.0–7.0': (6.0, 7.0),
-    'Alkaline\n>7.0': (7.01, 14),
+    'Alkaline\n>7.0': (7.01, 14.0),
   };
 
   @override
@@ -60,7 +57,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     super.dispose();
   }
 
-  // Lazy-render: extend visible window as user scrolls near bottom
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 300) {
@@ -93,34 +89,28 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     final (phMin, phMax) = _phRanges[_selectedPH] ?? (0.0, 14.0);
 
     List<SoilResult> list = _results.where((r) {
-      // --- Search ---
       final matchSearch =
           query.isEmpty ||
           r.farmName.toLowerCase().contains(query) ||
           r.prediction.toLowerCase().contains(query) ||
           r.date.toLowerCase().contains(query);
 
-      // --- Suitability ---
       final matchCategory =
           _selectedCategory == 'Lahat' ||
           (_selectedCategory == 'Angkop' && r.isSuitable) ||
           (_selectedCategory == 'Hindi Angkop' && !r.isSuitable);
 
-      // --- SOM ---
       final matchSOM =
           _selectedSOM == 'Lahat' ||
           r.prediction.toLowerCase() == _selectedSOM.toLowerCase();
 
-      // --- pH range ---
       final ph = double.tryParse(r.phLevel) ?? -1;
       final matchPH = _selectedPH == 'Lahat' || (ph >= phMin && ph <= phMax);
 
       return matchSearch && matchCategory && matchSOM && matchPH;
     }).toList();
 
-    // --- Sort by date ---
     list.sort((a, b) {
-      // Try ISO or "Month Day, Year" style; fall back to string compare
       final da = _parseDate(a.date);
       final db = _parseDate(b.date);
       return _sortNewest ? db.compareTo(da) : da.compareTo(db);
@@ -128,21 +118,17 @@ class _ListViewWidgetState extends State<ListViewWidget> {
 
     setState(() {
       _filtered = list;
-      _visibleCount = _pageSize; // reset window on any filter change
+      _visibleCount = _pageSize;
     });
   }
 
-  /// Flexible date parser — extend as needed to match your stored format.
   DateTime _parseDate(String raw) {
-    // Try standard formats
     try {
       return DateTime.parse(raw.trim());
     } catch (_) {}
-    // e.g. "June 3, 2025" or "Jun 3, 2025"
     try {
       return _parsePrettyDate(raw.trim());
     } catch (_) {}
-    // Last resort: lexicographic (works for YYYY-MM-DD strings)
     return DateTime(0);
   }
 
@@ -170,7 +156,129 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     return DateTime(y, m, d);
   }
 
-  // ── DELETE LOGIC ──
+  // ── COLORS / HELPERS ──
+
+  Color _getPredictionColor(String prediction) {
+    switch (prediction.toLowerCase()) {
+      case 'highly sufficient':
+        return const Color(0xFF16A34A);
+      case 'sufficient':
+        return const Color(0xFF2563EB);
+      case 'slightly sufficient':
+        return const Color(0xFFD97706);
+      case 'not sufficient':
+        return const Color(0xFFDC2626);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getPredictionEmoji(String prediction) {
+    switch (prediction.toLowerCase()) {
+      case 'highly sufficient':
+        return '🟢';
+      case 'sufficient':
+        return '🔵';
+      case 'slightly sufficient':
+        return '🟡';
+      case 'not sufficient':
+        return '🔴';
+      default:
+        return '⚪';
+    }
+  }
+
+  Color _phColor(double ph) {
+    if (ph < 6.0) return const Color(0xFFDC2626);
+    if (ph <= 7.0) return const Color(0xFF2563EB);
+    return const Color(0xFF7C3AED);
+  }
+
+  IconData _phIcon(double ph) {
+    if (ph < 6.0) return Icons.water_drop_outlined;
+    if (ph <= 7.0) return Icons.water_drop;
+    return Icons.water;
+  }
+
+  // ── EDIT FARM NAME ──
+
+  void _showEditDialog(SoilResult result) {
+    final editController = TextEditingController(text: result.farmName);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.edit, color: Color(0xFF187B4D), size: 22),
+              SizedBox(width: 8),
+              Text(
+                'I-edit ang Pangalan',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: TextField(
+            controller: editController,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              labelText: 'Pangalan ng Lupa / Farm Name',
+              hintText: 'Ilagay ang bagong pangalan...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () async {
+                final newName = editController.text.trim();
+                // FIX: guard against empty string and missing id
+                if (newName.isEmpty || result.id == null) return;
+
+                // FIX: mutate the model then persist to DB
+                result.farmName = newName;
+                await DatabaseHelper.instance.updateResult(result);
+
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+
+                // Refresh list so the new name shows everywhere
+                await _loadResults();
+
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Matagumpay na nabago ang pangalan!'),
+                    backgroundColor: Color(0xFF187B4D),
+                  ),
+                );
+              },
+              child: const Text(
+                'I-save',
+                style: TextStyle(
+                  color: Color(0xFF187B4D),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ── DELETE RECORD ──
+
   void _confirmDelete(SoilResult result) {
     showDialog(
       context: context,
@@ -193,26 +301,30 @@ class _ListViewWidgetState extends State<ListViewWidget> {
             ),
             TextButton(
               onPressed: () async {
-                if (result.id != null) {
-                  final deleted = result;
-                  await DatabaseHelper.instance.deleteResult(result.id!);
-                  if (!ctx.mounted) return;
-                  Navigator.pop(ctx);
-                  _loadResults();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Nabura ang record ni ${result.farmName}'),
-                      action: SnackBarAction(
-                        label: 'UNDO',
-                        onPressed: () async {
-                          await DatabaseHelper.instance.insertResult(deleted);
-                          _loadResults();
-                        },
-                      ),
-                      duration: const Duration(seconds: 4),
+                if (result.id == null) return;
+
+                // Capture snapshot before deletion for undo
+                final snapshot = result;
+                await DatabaseHelper.instance.deleteResult(result.id!);
+
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+                await _loadResults();
+
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Nabura ang record ni ${snapshot.farmName}'),
+                    action: SnackBarAction(
+                      label: 'UNDO',
+                      onPressed: () async {
+                        await DatabaseHelper.instance.insertResult(snapshot);
+                        _loadResults();
+                      },
                     ),
-                  );
-                }
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
               },
               child: const Text(
                 'Delete',
@@ -228,7 +340,85 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
-  // ── Result Popup ──
+  // ── LONG PRESS MENU (Edit + Delete) ──
+
+  void _showCardActionSheet(SoilResult result) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              result.farmName,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFE8F5E9),
+                child: Icon(Icons.edit, color: Color(0xFF187B4D), size: 20),
+              ),
+              title: const Text(
+                'I-edit ang Pangalan',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: const Text('Baguhin ang farm name'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditDialog(result);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFFFEBEE),
+                child: Icon(Icons.delete_outline, color: Colors.red, size: 20),
+              ),
+              title: const Text(
+                'Burahin ang Record',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+              subtitle: const Text('Hindi na mababawi ito'),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDelete(result);
+              },
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── RESULT POPUP MODAL ──
+
   void _showResultPopup(BuildContext context, SoilResult result) {
     final Color predColor = _getPredictionColor(result.prediction);
     final String predEmoji = _getPredictionEmoji(result.prediction);
@@ -250,7 +440,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
               width: 40,
               height: 4,
@@ -260,10 +449,9 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            // Image avatar
             Container(
-              width: 100,
-              height: 100,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(50),
                 color: const Color(0xFFD9D9D9),
@@ -276,16 +464,39 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                   : const Icon(Icons.image, size: 40, color: Colors.grey),
             ),
             const SizedBox(height: 8),
-            Text(
-              result.farmName,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+            // Farm name + edit icon
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    result.farmName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 18, color: Colors.grey),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showEditDialog(result);
+                  },
+                ),
+              ],
             ),
+
             Text(
               result.date,
               style: const TextStyle(fontSize: 12, color: Color(0xFF71717A)),
             ),
             const SizedBox(height: 16),
-            // SOM row
+
+            // SOM
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
@@ -332,7 +543,8 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
             const SizedBox(height: 12),
-            // pH row
+
+            // pH
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -343,9 +555,9 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               child: Row(
                 children: [
                   Icon(
-                    _phIcon(double.tryParse(result.phLevel) ?? 7),
+                    _phIcon(double.tryParse(result.phLevel) ?? 7.0),
                     size: 18,
-                    color: _phColor(double.tryParse(result.phLevel) ?? 7),
+                    color: _phColor(double.tryParse(result.phLevel) ?? 7.0),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -356,7 +568,8 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
             const SizedBox(height: 12),
-            // Suitability row
+
+            // Suitability
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -393,6 +606,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
   }
 
   // ── BUILD ──
+
   @override
   Widget build(BuildContext context) {
     final activeFilterCount = _countActiveFilters();
@@ -404,7 +618,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
           children: [
             const SizedBox(height: 16),
 
-            // ── Header ──
+            // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -425,12 +639,12 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                   ),
                   const Spacer(),
 
-                  // Sort toggle button
+                  // Sort toggle — FIX: removed redundant _applyFilters() call
                   GestureDetector(
-                    onTap: () {
-                      setState(() => _sortNewest = !_sortNewest);
+                    onTap: () => setState(() {
+                      _sortNewest = !_sortNewest;
                       _applyFilters();
-                    },
+                    }),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -464,7 +678,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                   ),
                   const SizedBox(width: 6),
 
-                  // Filter toggle button (with badge when filters active)
+                  // Filter toggle with badge
                   GestureDetector(
                     onTap: () => setState(() => _showFilters = !_showFilters),
                     child: Stack(
@@ -531,7 +745,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
 
-            // ── Search Bar ──
+            // Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: TextField(
@@ -568,7 +782,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
 
-            // ── Suitability Tabs ──
+            // Suitability Tabs
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
               child: Row(
@@ -582,7 +796,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
 
-            // ── Collapsible Filter Panel ──
+            // Collapsible Filter Panel
             if (_showFilters)
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -597,7 +811,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // SOM filter
                     const Text(
                       'SOM Classification',
                       style: TextStyle(
@@ -609,16 +822,11 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
-                      children: _somOptions
-                          .map((o) => _buildSOMChip(o))
-                          .toList(),
+                      children: _somOptions.map(_buildSOMChip).toList(),
                     ),
-
                     const SizedBox(height: 12),
                     const Divider(height: 1, color: Color(0xFFE0E0E0)),
                     const SizedBox(height: 12),
-
-                    // pH range filter — NEW
                     Row(
                       children: const [
                         Icon(
@@ -640,12 +848,8 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
-                      children: _phRanges.keys
-                          .map((k) => _buildPHChip(k))
-                          .toList(),
+                      children: _phRanges.keys.map(_buildPHChip).toList(),
                     ),
-
-                    // Clear filters link
                     if (activeFilterCount > 0) ...[
                       const SizedBox(height: 10),
                       GestureDetector(
@@ -664,7 +868,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                 ),
               ),
 
-            // ── Count + Sort indicator ──
+            // Record count
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(
@@ -673,7 +877,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                     '${_filtered.length} record${_filtered.length != 1 ? 's' : ''}',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  // Show how many are currently rendered when list is long
                   if (_filtered.length > _pageSize) ...[
                     const Text(
                       ' · ',
@@ -688,7 +891,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
 
-            // ── Grid ──
+            // Grid
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -706,7 +909,8 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
-  // ── How many non-default filters are on ──
+  // ── HELPERS ──
+
   int _countActiveFilters() {
     int count = 0;
     if (_selectedCategory != 'Lahat') count++;
@@ -725,11 +929,13 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     _applyFilters();
   }
 
-  // ── Chips ──
+  // ── CHIPS ──
+
   Widget _buildCategoryChip(String label) {
     final isSelected = _selectedCategory == label;
-    Color chipColor;
-    Color textColor;
+    final Color chipColor;
+    final Color textColor;
+
     if (!isSelected) {
       chipColor = const Color(0xFFF0F0F0);
       textColor = Colors.black54;
@@ -743,6 +949,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
       chipColor = const Color(0xFF187B4D);
       textColor = Colors.white;
     }
+
     return GestureDetector(
       onTap: () {
         setState(() => _selectedCategory = label);
@@ -791,18 +998,18 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
-  // NEW: pH range chip
   Widget _buildPHChip(String label) {
     final isSelected = _selectedPH == label;
-    Color activeColor;
+    final Color activeColor;
+
     if (label.contains('Acidic')) {
-      activeColor = const Color(0xFFDC2626); // red
+      activeColor = const Color(0xFFDC2626);
     } else if (label.contains('Alkaline')) {
-      activeColor = const Color(0xFF7C3AED); // purple
+      activeColor = const Color(0xFF7C3AED);
     } else if (label.contains('Optimal')) {
-      activeColor = const Color(0xFF2563EB); // blue
+      activeColor = const Color(0xFF2563EB);
     } else {
-      activeColor = const Color(0xFF187B4D); // green = Lahat
+      activeColor = const Color(0xFF187B4D);
     }
 
     return GestureDetector(
@@ -817,7 +1024,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
-          // Remove newlines for the chip display
           label.replaceAll('\n', ' '),
           style: TextStyle(
             fontSize: 11,
@@ -829,7 +1035,8 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
-  // ── Empty State ──
+  // ── EMPTY STATE ──
+
   Widget _buildEmptyState() {
     final isFiltered =
         _searchController.text.isNotEmpty ||
@@ -866,8 +1073,8 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
-  // ── Gallery Grid ──
-  // Only renders up to _visibleCount items; ScrollController extends the window
+  // ── GALLERY GRID ──
+
   Widget _buildGalleryGrid() {
     final slice = _filtered.take(_visibleCount).toList();
 
@@ -882,7 +1089,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
       ),
       itemCount: slice.length + (_visibleCount < _filtered.length ? 1 : 0),
       itemBuilder: (context, index) {
-        // Loading indicator at bottom
         if (index == slice.length) {
           return const Center(
             child: Padding(
@@ -906,7 +1112,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
 
     return GestureDetector(
       onTap: () => _showResultPopup(context, result),
-      onLongPress: () => _confirmDelete(result),
+      onLongPress: () => _showCardActionSheet(result),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -925,7 +1131,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Image ──
+                // Image
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(
@@ -941,18 +1147,18 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                           )
                         : Container(
                             color: Colors.grey.shade200,
+                            width: double.infinity,
                             child: const Icon(Icons.image, color: Colors.grey),
                           ),
                   ),
                 ),
 
-                // ── Info Panel ──
+                // Info Panel
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Farm name
                       Text(
                         result.farmName,
                         style: const TextStyle(
@@ -962,7 +1168,6 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
-                      // SOM prediction
                       Row(
                         children: [
                           Text(predEmoji, style: const TextStyle(fontSize: 10)),
@@ -981,10 +1186,8 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                         ],
                       ),
                       const SizedBox(height: 2),
-                      // pH mini-bar
                       _buildPHBar(ph),
                       const SizedBox(height: 2),
-                      // Date
                       Text(
                         result.date,
                         style: const TextStyle(fontSize: 9, color: Colors.grey),
@@ -995,10 +1198,11 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ],
             ),
 
-            // ── Suitability Badge (bottom-left of image) ──
+            // Suitability Badge
             Positioned(
+              top: 190,
               bottom: 58,
-              left: 6,
+              right: 6,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -1008,7 +1212,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  result.isSuitable ? '☕ Angkop' : '⚠️ Hindi',
+                  result.isSuitable ? '☕ Angkop' : '⚠️ Hindi Angkop',
                   style: const TextStyle(
                     fontSize: 9,
                     color: Colors.white,
@@ -1018,7 +1222,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
               ),
             ),
 
-            // ── Delete Button ──
+            // Delete button
             Positioned(
               top: 5,
               right: 5,
@@ -1040,7 +1244,7 @@ class _ListViewWidgetState extends State<ListViewWidget> {
     );
   }
 
-  // NEW: compact pH mini-bar shown in each card
+  // pH mini-bar
   Widget _buildPHBar(double ph) {
     final color = _phColor(ph);
     final fraction = (ph / 14.0).clamp(0.0, 1.0);
@@ -1071,48 +1275,5 @@ class _ListViewWidgetState extends State<ListViewWidget> {
         ),
       ],
     );
-  }
-
-  // ── Helpers ──
-  Color _phColor(double ph) {
-    if (ph < 6.0) return const Color(0xFFDC2626); // acidic → red
-    if (ph <= 7.0) return const Color(0xFF2563EB); // optimal → blue
-    return const Color(0xFF7C3AED); // alkaline → purple
-  }
-
-  IconData _phIcon(double ph) {
-    if (ph < 6.0) return Icons.water_drop_outlined;
-    if (ph <= 7.0) return Icons.water_drop;
-    return Icons.water;
-  }
-
-  Color _getPredictionColor(String prediction) {
-    switch (prediction.toLowerCase()) {
-      case 'highly sufficient':
-        return const Color(0xFF16A34A);
-      case 'sufficient':
-        return const Color(0xFF2563EB);
-      case 'slightly sufficient':
-        return const Color(0xFFD97706);
-      case 'not sufficient':
-        return const Color(0xFFDC2626);
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getPredictionEmoji(String prediction) {
-    switch (prediction.toLowerCase()) {
-      case 'highly sufficient':
-        return '🟢';
-      case 'sufficient':
-        return '🔵';
-      case 'slightly sufficient':
-        return '🟡';
-      case 'not sufficient':
-        return '🔴';
-      default:
-        return '⚪';
-    }
   }
 }
