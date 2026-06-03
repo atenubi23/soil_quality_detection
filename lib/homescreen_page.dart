@@ -5,6 +5,7 @@ import 'list_view.dart';
 import 'database_helper.dart';
 import 'result_page.dart';
 import 'profile.dart';
+import 'guidelines_page.dart'; // ← Idagdag ito
 
 class HomeScreenPage extends StatefulWidget {
   final int initialIndex;
@@ -104,7 +105,40 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
                       ),
                     ),
 
-                    // ── Profile Icon (top right) ── ADDED
+                    // ── Guidelines Button (top left) ──
+                    Positioned(
+                      top: 44,
+                      left: 16,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const GuidelinesPage(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.help_outline,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // ── Profile Icon (top right) ──
                     Positioned(
                       top: 44,
                       right: 16,
@@ -116,8 +150,6 @@ class _HomeScreenPageState extends State<HomeScreenPage> {
                               builder: (_) => const ProfilePage(),
                             ),
                           );
-                          // Refresh home after returning from profile
-                          // (in case farm name changed)
                           _homeKey.currentState?.refreshData();
                         },
                         child: Container(
