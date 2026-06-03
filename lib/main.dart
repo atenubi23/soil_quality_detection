@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'homescreen_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'onboarding_page.dart';
+import 'onboarding_screen.dart';
 
 void main() => runApp(const MyApp());
 
@@ -126,7 +127,7 @@ class _SplashScreenState extends State<SplashScreen>
       context,
       MaterialPageRoute(
         builder: (_) =>
-            onboardingDone ? const HomeScreenPage() : const OnboardingPage(),
+            onboardingDone ? const HomeScreenPage() : const OnboardingScreen(),
       ),
     );
   }
