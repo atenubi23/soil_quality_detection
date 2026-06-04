@@ -74,7 +74,51 @@ class _CamOpenState extends State<CamOpen> {
         ),
       ),
       body: _isCameraReady && _cameraController != null
-          ? Center(child: CameraPreview(_cameraController!))
+          ? Stack(
+              children: [
+                Center(child: CameraPreview(_cameraController!)),
+
+                // ── Info Banner ──
+                Positioned(
+                  top: 12,
+                  left: 16,
+                  right: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.white70,
+                          size: 18,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Siguraduhing malinis at tuyo ang lupa bago kunan ng litrato para sa mas tumpak na resulta.',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            )
           : const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
